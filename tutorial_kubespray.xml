@@ -37,7 +37,7 @@ SPAIN
 
   <net name="virbr0" mode="virtual_bridge" managed="no"/>
 
-  <vm name="k8s-master" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="4">
+  <vm name="k8s-master" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="2">
     <mem>2G</mem>
     <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_ubuntu64</filesystem>
     <if id="1" net="virbr0">
@@ -45,16 +45,16 @@ SPAIN
     </if>
   </vm>
 
-  <vm name="k8s-worker1" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="2">
-    <mem>2G</mem>
+  <vm name="k8s-worker1" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="1">
+    <mem>1200M</mem>
     <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_ubuntu64</filesystem>
     <if id="1" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
   </vm>
   
-  <vm name="k8s-worker2" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="2">
-    <mem>2G</mem>
+  <vm name="k8s-worker2" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="1">
+    <mem>1200M</mem>
     <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_ubuntu64</filesystem>
     <if id="1" net="virbr0">
       <ipv4>dhcp</ipv4>
