@@ -1,8 +1,14 @@
 # vnx-kubespray
 
-VNX scenario that deploys a production-ready three-node Kubernetes cluster using kubespray utilities.
+VNX scenario that deploys a production-ready three-node Kubernetes cluster using [kubespray](https://kubespray.io/#/) utilities.
+
+![kubespray](tutorial_kubespray/docs/kubespray-logo.png)
 
 By default Calico network plugin is used.
+
+## Scenario topology
+
+![VNX tutorial_kubespray scenario](tutorial_kubespray/docs/scenario.png)
 
 ## Requirements
 
@@ -18,7 +24,7 @@ By default Calico network plugin is used.
 Install Ansible among other utilities needed by kubespray
 
 ```bash
-cd ansible/kubespray
+cd tutorial_kubespray/ansible/kubespray
 sudo pip3 install -r requirements.txt
 ```
 
@@ -27,13 +33,14 @@ sudo pip3 install -r requirements.txt
 First of all deploy VNX scenario:
 
 ```bash
+cd tutorial_kubespray
 sudo vnx -f tutorial_kubespray.xml -v --create
 ```
 
 Then run ansible playbook to setup a Kubernetes cluster on the three virtual machines:
 
 ```bash
-cd ansible
+cd tutorial_kubespray/ansible
 ansible-playbook playbooks/site.yml
 ```
 
@@ -43,16 +50,23 @@ The execution of ansible playbook will take 10 minutes roughly. Once this playbo
 
 ### Node Management
 
-VNX creates a point-to-point link for VM management access and dynamically updates `/etc/hosts`. Hence, our Kubernetes nodes can be easily accessed by using the hostnames and the SSH key that have been defined in VNX:
+VNX creates a point-to-point link for management access and dynamically builds an SSH config file for the scenario. Such file can be found at `$HOME/.ssh/config.d/vnx/tutorial_kubespray`. As a result, our Kubernetes nodes and the remaining network elements can be easily accessed as follows:
 
 ```bash
 # Master node
-ssh -i config/ssh/id_rsa root@k8s-master
+ssh k8s-master
 
 # Worker nodes
-ssh -i config/ssh/id_rsa root@k8s-worker1
-ssh -i config/ssh/id_rsa root@k8s-worker2
+ssh k8s-worker1
+ssh k8s-worker2
+
+## Router
+ssh r1
+
+## End-user
+ssh h1
 ```
+
 This is how Ansible would access the nodes in the scenario.
 
 ### Kubectl usage
@@ -65,11 +79,11 @@ Alternatively, kubespray could install the `kubectl` and/or copy the config file
 
 Helm client is installed in the master node. In addition, kubespray configures the stable registry for us.
 
-
 ## Cleanup
 
 To destroy the VNX scenario, run the following command:
 
 ```bash
+cd tutorial_kubespray
 sudo vnx -f tutorial_kubespray.xml -v --destroy
 ```
