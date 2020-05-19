@@ -6,7 +6,7 @@
 VNX Sample scenarios
 ~~~~~~~~~~~~~~~~~~~~
 
-Name:        tutorial_k8s_kvm
+Name:        tutorial_kubespray
 Description: KVM-based scenario that sets up a three-node Kubernetes (k8s) cluster
              KVM machines run Ubuntu 18.04LTS 64bit as Guest OS.
 
@@ -36,11 +36,16 @@ SPAIN
   </global>
 
   <net name="virbr0" mode="virtual_bridge" managed="no"/>
+  <net name="k8s_LAN" mode="virtual_bridge"/>
+  <net name="user_LAN" mode="virtual_bridge"/>
 
   <vm name="k8s-master" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="2">
     <mem>2G</mem>
     <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_ubuntu64</filesystem>
-    <if id="1" net="virbr0">
+    <if id="1" net="k8s_LAN">
+      <ipv4>10.10.20.10/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
   </vm>
@@ -48,7 +53,10 @@ SPAIN
   <vm name="k8s-worker1" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="1">
     <mem>1200M</mem>
     <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_ubuntu64</filesystem>
-    <if id="1" net="virbr0">
+    <if id="1" net="k8s_LAN">
+      <ipv4>10.10.20.11/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
   </vm>
@@ -56,9 +64,37 @@ SPAIN
   <vm name="k8s-worker2" type="libvirt" subtype="kvm" os="linux" exec_mode="sdisk" arch="x86_64" vcpu="1">
     <mem>1200M</mem>
     <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_ubuntu64</filesystem>
-    <if id="1" net="virbr0">
+    <if id="1" net="k8s_LAN">
+      <ipv4>10.10.20.12/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
       <ipv4>dhcp</ipv4>
     </if>
   </vm>
+
+  <vm name="r1" type="lxc" arch="x86_64">
+    <mem>1G</mem>
+    <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_lxc_ubuntu64</filesystem>
+    <forwarding type="ip" />
+    <if id="1" net="k8s_LAN">
+      <ipv4>10.10.20.1/24</ipv4>
+    </if>
+    <if id="2" net="user_LAN">
+      <ipv4>10.10.10.1/24</ipv4>
+    </if>
+    <if id="9" net="virbr0">
+      <ipv4>dhcp</ipv4>
+    </if>
+  </vm>
+
+  <vm name="h1" type="lxc" arch="x86_64">
+    <mem>1G</mem>
+    <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_lxc_ubuntu64</filesystem>
+    <if id="1" net="user_LAN">
+      <ipv4>10.10.10.2/24</ipv4>
+    </if>
+    <route type="ipv4" gw="10.10.10.1">default</route>
+  </vm>
+
 
 </vnx>
