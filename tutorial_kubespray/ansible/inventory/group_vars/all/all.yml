@@ -99,3 +99,8 @@ loadbalancer_apiserver_healthcheck_port: 8081
 ## Set Pypi repo and cert accordingly
 # pyrepo_index: https://pypi.example.com/simple
 # pyrepo_cert: /etc/ssl/certs/ca-certificates.crt
+
+
+## Fix docker version
+## BUG: https://github.com/kubernetes-sigs/kubespray/issues/6160
+docker_version: "19.03"

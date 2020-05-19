@@ -13,7 +13,7 @@
 
       - name: Copy BIRD configuration for VNX scenario
         copy:
-          src: ../../config/bird/bird.conf
+          src: ../../conf/bird/bird.conf
           dest: /etc/bird/bird.conf
         tags: bird
 

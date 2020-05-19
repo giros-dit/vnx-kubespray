@@ -24,7 +24,7 @@ SPAIN
   <global>
     <version>2.0</version>
     <scenario_name>tutorial_kubespray</scenario_name>
-    <ssh_key>./config/ssh/id_rsa.pub</ssh_key>
+    <ssh_key>./conf/ssh/id_rsa.pub</ssh_key>
     <automac/>
     <vm_mgmt type="private" network="192.168.50.0" mask="24" offset="16">
        <host_mapping />
