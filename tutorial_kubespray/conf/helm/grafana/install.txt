@@ -2,4 +2,4 @@
 helm repo add stable https://kubernetes-charts.storage.googleapis.com
 
 # Install Grafana Chart
-helm install --name my-first-release stable/grafana -f values.yaml
+helm install my-grafana-app stable/grafana -f values.yaml

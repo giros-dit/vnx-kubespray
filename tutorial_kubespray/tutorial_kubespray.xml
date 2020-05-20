@@ -10,6 +10,8 @@ Name:        tutorial_kubespray
 Description: KVM-based scenario that sets up a three-node Kubernetes (k8s) cluster
              KVM machines run Ubuntu 18.04LTS 64bit as Guest OS.
 
+             LXC containers are utilized to emulate router r1 and end-user h1.
+
 This file is part of the Virtual Networks over LinuX (VNX) Project distribution. 
 (www: http://www.dit.upm.es/vnx - e-mail: vnx@dit.upm.es) 
 

@@ -291,9 +291,9 @@ calico_ip_auto_method: "interface=eth1"
 ## Advertise ServiceIP CIDR (DEPRECATED: Waiting for Kubespray update)
 calico_advertise_cluster_ips: true
 
-## Global BGP peer
-# peer_with_router: true
-# peers:
-#   scope: 
-#     global:
-#       - "10.10.20.1"
+## Global BGP peer (Router r1)
+peer_with_router: true
+peers:
+  - scope: global
+    router_id: "10.10.20.1"
+    as: 64512
