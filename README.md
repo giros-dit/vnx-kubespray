@@ -10,6 +10,8 @@ By default Calico network plugin is used.
 
 ![VNX tutorial_kubespray scenario](tutorial_kubespray/docs/scenario.png)
 
+K8s nodes are deployed as KVM virtual machines whereas r1 and h1 are LXC containers. They all run Ubuntu LTS 18.04.
+
 ## Requirements
 
 - Baremetal Linux OS (_Tested on Ubuntu LTS 18.04_)
@@ -77,7 +79,11 @@ Alternatively, kubespray could install the `kubectl` and/or copy the config file
 
 ### Helm client
 
-Helm client is installed in the master node. In addition, kubespray configures the stable registry for us.
+Helm client is installed in the master node.
+
+## Network Management
+
+> *TODO*: We  use Calico as k8s network plugin. BGP peering is configured from each k8s node to router r1, who runs BIRD daemon providing BGP route reflector_functions to the k8s cluster. By using Calicos BGP feature, our router r1 can dynamically learn pod and service IPs from Kubernetes. As a result, external hosts such as h1 can easily access k8s services without having to manage routing in the network.
 
 ## Cleanup
 
