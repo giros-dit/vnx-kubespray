@@ -1,8 +1,0 @@
----
-  - name: Include BIRD config for r1
-    include: r1-bird.yml
-    tags: bird
-
-  - name: Include kubespray tasks
-    include: ../kubespray/cluster.yml
-    tags: kubespray
