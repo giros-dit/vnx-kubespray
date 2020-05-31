@@ -103,7 +103,7 @@ kube_proxy_mode: ipvs
 
 # configure arp_ignore and arp_announce to avoid answering ARP queries from kube-ipvs0 interface
 # must be set to true for MetalLB to work
-kube_proxy_strict_arp: false
+kube_proxy_strict_arp: true
 
 # A string slice of values which specify the addresses to use for NodePorts.
 # Values may be valid IP blocks (e.g. 1.2.3.0/24, 1.2.3.4/32).
@@ -279,7 +279,6 @@ persistent_volumes_enabled: false
 ## NVIDIA GPU device plugin image.
 # nvidia_gpu_device_plugin_container: "k8s.gcr.io/nvidia-gpu-device-plugin@sha256:0842734032018be107fa2490c98156992911e3e1f2a21e059ff0105b07dd8e9e"
 
-
 # Calico
 calico_datastore: "etcd"
 
@@ -289,11 +288,14 @@ calico_datastore: "etcd"
 calico_ip_auto_method: "interface=eth1"
 
 ## Advertise ServiceIP CIDR (DEPRECATED: Waiting for Kubespray update)
-calico_advertise_cluster_ips: true
+# calico_advertise_cluster_ips: true
 
-## Global BGP peer (Router r1)
-peer_with_router: true
-peers:
-  - scope: global
-    router_id: "10.10.20.1"
-    as: 64512
+# ## Global BGP peer (Router r1)
+# peer_with_router: true
+# peers:
+#   - scope: global
+#     router_id: "10.10.20.1"
+#     as: 64512
+
+# Nginx ingress controller deployment
+ingress_nginx_enabled: true
