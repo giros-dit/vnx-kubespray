@@ -1,24 +1,7 @@
 ---
-  - hosts: r1
-    tasks:
-      - name: Install BIRD daemon
-        package: 
-          name: bird
-          state: present
-          update_cache: true
-        tags: bird
-
-      - name: Copy BIRD configuration for VNX scenario
-        copy:
-          src: ../../conf/bird/bird.conf
-          dest: /etc/bird/bird.conf
-        tags: bird
-
-      - name: Restart BIRD daemon to apply configuration
-        service:
-          name: bird
-          state: restarted
-        tags: bird
+  - name: Include BIRD config for r1
+    include: r1-bird.yml
+    tags: bird
 
   - name: Include kubespray tasks
     include: ../kubespray/cluster.yml
