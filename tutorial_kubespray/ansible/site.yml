@@ -26,3 +26,7 @@
       - helm-operator
     tags: helm-operator
 
+  - hosts: kube-master[0]
+    roles:
+      - openfaas
+    tags: openfaas

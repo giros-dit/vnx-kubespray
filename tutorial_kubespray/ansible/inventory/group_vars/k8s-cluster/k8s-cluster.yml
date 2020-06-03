@@ -299,3 +299,6 @@ calico_ip_auto_method: "interface=eth1"
 
 # Nginx ingress controller deployment
 ingress_nginx_enabled: true
+
+# Registry deployment
+registry_enabled: true
