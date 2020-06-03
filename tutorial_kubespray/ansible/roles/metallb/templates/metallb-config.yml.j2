@@ -6,11 +6,11 @@ metadata:
 data:
   config: |
     peers:
-    - my-asn: 64512
+    - peer-address: 10.10.10.1
       peer-asn: 64512
-      peer-address: 10.10.10.1
+      my-asn: 64512
     address-pools:
-    - name: my-ip-space
+    - name: default
       protocol: bgp
       addresses:
       - 10.10.100.0/24
