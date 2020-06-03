@@ -19,4 +19,4 @@ def handle(req):
         version=version,
         plural=plural)
 
-    return api_response
+    return json.dumps(api_response)
