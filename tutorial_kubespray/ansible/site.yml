@@ -21,3 +21,8 @@
       - nginx-ingress
     tags: nginx-ingress
 
+  - hosts: kube-master[0]
+    roles:
+      - helm-operator
+    tags: helm-operator
+
