@@ -6,7 +6,7 @@ metadata:
 spec:
   chart:
     repository: https://kubernetes-charts.storage.googleapis.com
-    name: stable/grafana
+    name: grafana
     version: 5.1.2
   values:
     adminUser: luis
