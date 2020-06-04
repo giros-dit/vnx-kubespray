@@ -30,3 +30,8 @@
     roles:
       - openfaas
     tags: openfaas
+
+  - name: Build and deploy helm-wrapper function
+    roles:
+      - helm-wrapper
+    tags: helm-wrapper
