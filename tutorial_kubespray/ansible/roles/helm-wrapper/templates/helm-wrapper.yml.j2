@@ -1,7 +1,7 @@
 version: 1.0
 provider:
   name: openfaas
-  gateway: http://10.10.100.1:8080
+  gateway: http://{{ hostvars[groups['kube-master'][0]]['openfaas_gateway'] }}
 functions:
   helm-wrapper:
     lang: python3

@@ -31,7 +31,7 @@
       - openfaas
     tags: openfaas
 
-  - name: Build and deploy helm-wrapper function
+  - hosts: k8s-cluster
     roles:
       - helm-wrapper
     tags: helm-wrapper

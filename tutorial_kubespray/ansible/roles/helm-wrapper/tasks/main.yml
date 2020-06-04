@@ -40,10 +40,17 @@
   when:
     - "inventory_hostname == groups['kube-master'][0]"
 
-- name: Copy helm-wrapper function
+- name: Copy helm-wrapper function code
   copy:
     src: files/helm-wrapper/
     dest: /root/
+  when:
+    - "inventory_hostname == groups['kube-node'][0]"
+
+- name: Template helm-wrapper function
+  template:
+    src: helm-wrapper.yml.j2
+    dest: /root/helm-wrapper.yml
   when:
     - "inventory_hostname == groups['kube-node'][0]"
 
