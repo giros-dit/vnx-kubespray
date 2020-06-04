@@ -10,10 +10,12 @@ def handle(req):
 
     config.load_incluster_config()
 
+    # Parse JSON body from request
     request = json.loads(req)
     chart_repository = request["repository"]
     chart_name = request["name"]
     chart_version = request["version"]
+    chart_values = request.get("values")
 
     group = "helm.fluxcd.io"
     api_version = "v1"
@@ -36,6 +38,9 @@ def handle(req):
             }
         }
     }
+
+    if chart_values:
+        helmrelease["spec"]["values"] = chart_values
 
     api_response = api_instance.create_namespaced_custom_object(
         group=group,
