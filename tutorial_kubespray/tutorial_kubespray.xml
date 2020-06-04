@@ -89,6 +89,7 @@ SPAIN
     <hostif net="LAN">
         <ipv4>10.10.10.100/24</ipv4>
     </hostif>
+    <route type="ipv4" gw="10.10.10.1">10.10.100.0/24</route>
   </host>
 
 </vnx>
