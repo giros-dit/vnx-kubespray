@@ -11,3 +11,5 @@ spec:
   values:
     adminUser: luis
     adminPassword: giros
+    service:
+      type: LoadBalancer
