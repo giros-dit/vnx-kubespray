@@ -28,7 +28,7 @@ spec:
 {% endif %}
 {% if ingress_nginx_nodeselector %}
       nodeSelector:
-        {{ ingress_nginx_nodeselector | to_nice_yaml }}
+        {{ ingress_nginx_nodeselector | to_nice_yaml | indent(width=8) }}
 {%- endif %}
 {% if ingress_nginx_tolerations %}
       tolerations:
@@ -50,6 +50,9 @@ spec:
             - --tcp-services-configmap=$(POD_NAMESPACE)/tcp-services
             - --udp-services-configmap=$(POD_NAMESPACE)/udp-services
             - --annotations-prefix=nginx.ingress.kubernetes.io
+{% if ingress_nginx_class is defined %}
+            - --ingress-class={{ ingress_nginx_class }}
+{% endif %}
 {% if ingress_nginx_host_network %}
             - --report-node-internal-ip-address
 {% endif %}
@@ -67,6 +70,7 @@ spec:
                   - NET_BIND_SERVICE
             # www-data -> 101
             runAsUser: 101
+            allowPrivilegeEscalation: true
           env:
             - name: POD_NAME
               valueFrom:
@@ -76,6 +80,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: LD_PRELOAD
+              value: /usr/local/lib/libmimalloc.so
           ports:
             - name: http
               containerPort: 80
@@ -83,6 +89,11 @@ spec:
             - name: https
               containerPort: 443
               hostPort: {{ ingress_nginx_secure_port }}
+            - name: metrics
+              containerPort: 10254
+{% if not ingress_nginx_host_network %}
+              hostPort: {{ ingress_nginx_metrics_port }}
+{% endif %}
           livenessProbe:
             failureThreshold: 3
             httpGet:

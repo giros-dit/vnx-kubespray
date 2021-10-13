@@ -7,7 +7,6 @@ apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 imageRepository: {{ kube_image_repo }}
 kubernetesVersion: {{ kube_version }}
-useHyperKubeImage: {{ kubeadm_use_hyperkube_image }}
 etcd:
 {% if etcd_kubeadm_enabled %}
   local:
@@ -22,5 +21,5 @@ etcd:
 {% endif %}
 dns:
   type: CoreDNS
-  imageRepository: {{ coredns_image_repo | regex_replace('/coredns$','') }}
+  imageRepository: {{ coredns_image_repo | regex_replace('/coredns.*$','') }}
   imageTag: {{ coredns_image_tag }}

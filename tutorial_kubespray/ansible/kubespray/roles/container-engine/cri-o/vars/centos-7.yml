@@ -1,10 +1,12 @@
 ---
+crio_versioned_pkg:
+  "1.21":
+    - "cri-o-1.21.*"
+  "1.20":
+    - "cri-o-1.20.*"
+  "1.19":
+    - "cri-o-1.19.*"
 
-crio_packages:
-  - cri-o
-  - oci-systemd-hook
+default_crio_packages: "{{ crio_versioned_pkg[crio_version] }}"
 
-crio_repo_path:
-  "1.18": "1.17:/1.17.4"
-  "1.17": "1.17:/1.17.4"
-  "1.16": "1.16"
+crio_packages: "{{ centos_crio_packages | default(default_crio_packages) }}"

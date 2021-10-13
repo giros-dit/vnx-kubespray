@@ -5,7 +5,7 @@
 If you have questions, check the documentation at [kubespray.io](https://kubespray.io) and join us on the [kubernetes slack](https://kubernetes.slack.com), channel **\#kubespray**.
 You can get your invite [here](http://slack.k8s.io/)
 
-- Can be deployed on **AWS, GCE, Azure, OpenStack, vSphere, Packet (bare metal), Oracle Cloud Infrastructure (Experimental), or Baremetal**
+- Can be deployed on **[AWS](docs/aws.md), GCE, [Azure](docs/azure.md), [OpenStack](docs/openstack.md), [vSphere](docs/vsphere.md), [Equinix Metal](docs/equinix-metal.md) (bare metal), Oracle Cloud Infrastructure (Experimental), or Baremetal**
 - **Highly available** cluster
 - **Composable** (Choice of the network plugin for instance)
 - Supports most popular **Linux distributions**
@@ -32,7 +32,7 @@ CONFIG_FILE=inventory/mycluster/hosts.yaml python3 contrib/inventory_builder/inv
 
 # Review and change parameters under ``inventory/mycluster/group_vars``
 cat inventory/mycluster/group_vars/all/all.yml
-cat inventory/mycluster/group_vars/k8s-cluster/k8s-cluster.yml
+cat inventory/mycluster/group_vars/k8s_cluster/k8s-cluster.yml
 
 # Deploy Kubespray with Ansible Playbook - run the playbook as root
 # The option `--become` is required, as for example writing SSL keys in /etc/,
@@ -48,10 +48,22 @@ As a consequence, `ansible-playbook` command will fail with:
 ERROR! no action detected in task. This often indicates a misspelled module name, or incorrect module path.
 ```
 
-probably pointing on a task depending on a module present in requirements.txt (i.e. "unseal vault").
+probably pointing on a task depending on a module present in requirements.txt.
 
 One way of solving this would be to uninstall the Ansible package and then, to install it via pip but it is not always possible.
 A workaround consists of setting `ANSIBLE_LIBRARY` and `ANSIBLE_MODULE_UTILS` environment variables respectively to the `ansible/modules` and `ansible/module_utils` subdirectories of pip packages installation location, which can be found in the Location field of the output of `pip show [package]` before executing `ansible-playbook`.
+
+A simple way to ensure you get all the correct version of Ansible is to use the [pre-built docker image from Quay](https://quay.io/repository/kubespray/kubespray?tab=tags).
+You will then need to use [bind mounts](https://docs.docker.com/storage/bind-mounts/) to get the inventory and ssh key into the container, like this:
+
+```ShellSession
+docker pull quay.io/kubespray/kubespray:v2.16.0
+docker run --rm -it --mount type=bind,source="$(pwd)"/inventory/sample,dst=/inventory \
+  --mount type=bind,source="${HOME}"/.ssh/id_rsa,dst=/root/.ssh/id_rsa \
+  quay.io/kubespray/kubespray:v2.16.0 bash
+# Inside the container you may now run the kubespray playbooks:
+ansible-playbook -i /inventory/inventory.ini --private-key /root/.ssh/id_rsa cluster.yml
+```
 
 ### Vagrant
 
@@ -75,6 +87,7 @@ vagrant up
 - [Requirements](#requirements)
 - [Kubespray vs ...](docs/comparisons.md)
 - [Getting started](docs/getting-started.md)
+- [Setting up your first cluster](docs/setting-up-your-first-cluster.md)
 - [Ansible inventory and tags](docs/ansible.md)
 - [Integration with existing ansible repo](docs/integration.md)
 - [Deployment data variables](docs/vars.md)
@@ -82,7 +95,7 @@ vagrant up
 - [HA mode](docs/ha-mode.md)
 - [Network plugins](#network-plugins)
 - [Vagrant install](docs/vagrant.md)
-- [CoreOS bootstrap](docs/coreos.md)
+- [Flatcar Container Linux bootstrap](docs/flatcar.md)
 - [Fedora CoreOS bootstrap](docs/fcos.md)
 - [Debian Jessie setup](docs/debian.md)
 - [openSUSE setup](docs/opensuse.md)
@@ -92,60 +105,67 @@ vagrant up
 - [AWS](docs/aws.md)
 - [Azure](docs/azure.md)
 - [vSphere](docs/vsphere.md)
-- [Packet Host](docs/packet.md)
+- [Equinix Metal](docs/equinix-metal.md)
 - [Large deployments](docs/large-deployments.md)
 - [Adding/replacing a node](docs/nodes.md)
 - [Upgrades basics](docs/upgrades.md)
+- [Air-Gap installation](docs/offline-environment.md)
 - [Roadmap](docs/roadmap.md)
 
 ## Supported Linux Distributions
 
-- **Container Linux by CoreOS**
-- **Debian** Buster, Jessie, Stretch, Wheezy
-- **Ubuntu** 16.04, 18.04
-- **CentOS/RHEL** 7, 8 (experimental: see [centos 8 notes](docs/centos8.md)
-- **Fedora** 30, 31
-- **Fedora CoreOS** (experimental: see [fcos Note](docs/fcos.md))
-- **openSUSE** Leap 42.3/Tumbleweed
-- **Oracle Linux** 7
+- **Flatcar Container Linux by Kinvolk**
+- **Debian** Bullseye, Buster, Jessie, Stretch
+- **Ubuntu** 16.04, 18.04, 20.04
+- **CentOS/RHEL** 7, [8](docs/centos8.md)
+- **Fedora** 33, 34
+- **Fedora CoreOS** (see [fcos Note](docs/fcos.md))
+- **openSUSE** Leap 15.x/Tumbleweed
+- **Oracle Linux** 7, [8](docs/centos8.md)
+- **Alma Linux** [8](docs/centos8.md)
+- **Amazon Linux 2** (experimental: see [amazon linux notes](docs/amazonlinux.md))
 
 Note: Upstart/SysV init based OS types are not supported.
 
 ## Supported Components
 
 - Core
-  - [kubernetes](https://github.com/kubernetes/kubernetes) v1.18.2
-  - [etcd](https://github.com/coreos/etcd) v3.3.12
-  - [docker](https://www.docker.com/) v18.06 (see note)
-  - [containerd](https://containerd.io/) v1.2.13
-  - [cri-o](http://cri-o.io/) v1.17 (experimental: see [CRI-O Note](docs/cri-o.md). Only on fedora, ubuntu and centos based OS)
+  - [kubernetes](https://github.com/kubernetes/kubernetes) v1.21.5
+  - [etcd](https://github.com/coreos/etcd) v3.4.13
+  - [docker](https://www.docker.com/) v20.10 (see note)
+  - [containerd](https://containerd.io/) v1.4.9
+  - [cri-o](http://cri-o.io/) v1.21 (experimental: see [CRI-O Note](docs/cri-o.md). Only on fedora, ubuntu and centos based OS)
 - Network Plugin
-  - [cni-plugins](https://github.com/containernetworking/plugins) v0.8.5
-  - [calico](https://github.com/projectcalico/calico) v3.14.0
+  - [cni-plugins](https://github.com/containernetworking/plugins) v0.9.1
+  - [calico](https://github.com/projectcalico/calico) v3.19.2
   - [canal](https://github.com/projectcalico/canal) (given calico/flannel versions)
-  - [cilium](https://github.com/cilium/cilium) v1.7.3
-  - [contiv](https://github.com/contiv/install) v1.2.1
-  - [flanneld](https://github.com/coreos/flannel) v0.12.0
-  - [kube-ovn](https://github.com/alauda/kube-ovn) v1.1.1
-  - [kube-router](https://github.com/cloudnativelabs/kube-router) v0.4.0
-  - [multus](https://github.com/intel/multus-cni) v3.4.1
-  - [weave](https://github.com/weaveworks/weave) v2.6.2
+  - [cilium](https://github.com/cilium/cilium) v1.9.10
+  - [flanneld](https://github.com/flannel-io/flannel) v0.14.0
+  - [kube-ovn](https://github.com/alauda/kube-ovn) v1.7.2
+  - [kube-router](https://github.com/cloudnativelabs/kube-router) v1.3.0
+  - [multus](https://github.com/intel/multus-cni) v3.7.2
+  - [ovn4nfv](https://github.com/opnfv/ovn4nfv-k8s-plugin) v1.1.0
+  - [weave](https://github.com/weaveworks/weave) v2.8.1
 - Application
+  - [ambassador](https://github.com/datawire/ambassador): v1.5
   - [cephfs-provisioner](https://github.com/kubernetes-incubator/external-storage) v2.1.0-k8s1.11
   - [rbd-provisioner](https://github.com/kubernetes-incubator/external-storage) v2.1.1-k8s1.11
-  - [cert-manager](https://github.com/jetstack/cert-manager) v0.11.1
-  - [coredns](https://github.com/coredns/coredns) v1.6.7
-  - [ingress-nginx](https://github.com/kubernetes/ingress-nginx) v0.30.0
+  - [cert-manager](https://github.com/jetstack/cert-manager) v1.0.4
+  - [coredns](https://github.com/coredns/coredns) v1.8.0
+  - [ingress-nginx](https://github.com/kubernetes/ingress-nginx) v1.0.0
 
-Note: The list of validated [docker versions](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG-1.16.md) was updated to 1.13.1, 17.03, 17.06, 17.09, 18.06, 18.09. kubeadm now properly recognizes Docker 18.09.0 and newer, but still treats 18.06 as the default supported version. The kubelet might break on docker's non-standard version numbering (it no longer uses semantic versioning). To ensure auto-updates don't break your cluster look into e.g. yum versionlock plugin or apt pin).
+## Container Runtime Notes
+
+- The list of available docker version is 18.09, 19.03 and 20.10. The recommended docker version is 20.10. The kubelet might break on docker's non-standard version numbering (it no longer uses semantic versioning). To ensure auto-updates don't break your cluster look into e.g. yum versionlock plugin or apt pin).
+- The cri-o version should be aligned with the respective kubernetes version (i.e. kube_version=1.20.x, crio_version=1.20)
 
 ## Requirements
 
-- **Minimum required version of Kubernetes is v1.16**
-- **Ansible v2.9+, Jinja 2.11+ and python-netaddr is installed on the machine that will run Ansible commands**
-- The target servers must have **access to the Internet** in order to pull docker images. Otherwise, additional configuration is required (See [Offline Environment](https://github.com/kubernetes-sigs/kubespray/blob/master/docs/downloads.md#offline-environment))
+- **Minimum required version of Kubernetes is v1.19**
+- **Ansible v2.9.x, Jinja 2.11+ and python-netaddr is installed on the machine that will run Ansible commands, Ansible 2.10.x is experimentally supported for now**
+- The target servers must have **access to the Internet** in order to pull docker images. Otherwise, additional configuration is required (See [Offline Environment](docs/offline-environment.md))
 - The target servers are configured to allow **IPv4 forwarding**.
-- **Your ssh key must be copied** to all the servers part of your inventory.
+- If using IPv6 for pods and services, the target servers are configured to allow **IPv6 forwarding**.
 - The **firewalls are not managed**, you'll need to implement your own rules the way you used to.
     in order to avoid any issue during deployment you should disable your firewall.
 - If kubespray is ran from non-root user account, correct privilege escalation method
@@ -175,8 +195,7 @@ You can choose between 10 network plugins. (default: `calico`, except Vagrant us
 
 - [cilium](http://docs.cilium.io/en/latest/): layer 3/4 networking (as well as layer 7 to protect and secure application protocols), supports dynamic insertion of BPF bytecode into the Linux kernel to implement security services, networking and visibility logic.
 
-- [contiv](docs/contiv.md): supports vlan, vxlan, bgp and Cisco SDN networking. This plugin is able to
-    apply firewall policies, segregate containers in multiple network and bridging pods onto physical networks.
+- [ovn4nfv](docs/ovn4nfv.md): [ovn4nfv-k8s-plugins](https://github.com/opnfv/ovn4nfv-k8s-plugin) is the network controller, OVS agent and CNI server to offer basic SFC and OVN overlay networking.
 
 - [weave](docs/weave.md): Weave is a lightweight container overlay network that doesn't require an external K/V database cluster.
     (Please refer to `weave` [troubleshooting documentation](https://www.weave.works/docs/net/latest/troubleshooting/)).
@@ -196,6 +215,14 @@ The choice is defined with the variable `kube_network_plugin`. There is also an
 option to leverage built-in cloud provider networking instead.
 See also [Network checker](docs/netcheck.md).
 
+## Ingress Plugins
+
+- [ambassador](docs/ambassador.md): the Ambassador Ingress Controller and API gateway.
+
+- [nginx](https://kubernetes.github.io/ingress-nginx): the NGINX Ingress Controller.
+
+- [metallb](docs/metallb.md): the MetalLB bare-metal service LoadBalancer provider.
+
 ## Community docs and resources
 
 - [kubernetes.io/docs/setup/production-environment/tools/kubespray/](https://kubernetes.io/docs/setup/production-environment/tools/kubespray/)
@@ -210,7 +237,8 @@ See also [Network checker](docs/netcheck.md).
 
 ## CI Tests
 
-[![Build graphs](https://gitlab.com/kargo-ci/kubernetes-sigs-kubespray/badges/master/build.svg)](https://gitlab.com/kargo-ci/kubernetes-sigs-kubespray/pipelines)
+[![Build graphs](https://gitlab.com/kargo-ci/kubernetes-sigs-kubespray/badges/master/pipeline.svg)](https://gitlab.com/kargo-ci/kubernetes-sigs-kubespray/pipelines)
 
-CI/end-to-end tests sponsored by Google (GCE)
+CI/end-to-end tests sponsored by: [CNCF](https://cncf.io), [Equinix Metal](https://metal.equinix.com/), [OVHcloud](https://www.ovhcloud.com/), [ELASTX](https://elastx.se/).
+
 See the [test matrix](docs/test_cases.md) for details.

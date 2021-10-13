@@ -1,6 +1,6 @@
 # Azure Disk CSI Driver
 
-The Azure Disk CSI driver allows you to provision volumes for pods with a Kubernetes deployment over Azure Cloud. The CSI driver replaces to volume provioning done by the in-tree azure cloud provider which is deprecated.
+The Azure Disk CSI driver allows you to provision volumes for pods with a Kubernetes deployment over Azure Cloud. The CSI driver replaces to volume provisioning done by the in-tree azure cloud provider which is deprecated.
 
 This documentation is an updated version of the in-tree Azure cloud provider documentation (azure.md).
 
@@ -8,7 +8,7 @@ To deploy Azure Disk CSI driver, uncomment the `azure_csi_enabled` option in `gr
 
 ## Azure Disk CSI Storage Class
 
-If you want to deploy the Azure Disk storage class to provision volumes dynamically, you should set `persistent_volumes_enabled` in `group_vars/k8s-cluster/k8s-cluster.yml` to `true`.
+If you want to deploy the Azure Disk storage class to provision volumes dynamically, you should set `persistent_volumes_enabled` in `group_vars/k8s_cluster/k8s_cluster.yml` to `true`.
 
 ## Parameters
 

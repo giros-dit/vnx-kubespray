@@ -20,7 +20,7 @@
   register: "etcd_client_cert_serial_result"
   changed_when: false
   when:
-    - inventory_hostname in groups['k8s-cluster']|union(groups['calico-rr']|default([]))|unique|sort
+    - inventory_hostname in groups['k8s_cluster']|union(groups['calico_rr']|default([]))|unique|sort
   tags:
     - master
     - network
@@ -29,7 +29,7 @@
   set_fact:
     etcd_client_cert_serial: "{{ etcd_client_cert_serial_result.stdout.split('=')[1] }}"
   when:
-    - inventory_hostname in groups['k8s-cluster']|union(groups['calico-rr']|default([]))|unique|sort
+    - inventory_hostname in groups['k8s_cluster']|union(groups['calico_rr']|default([]))|unique|sort
   tags:
     - master
     - network
@@ -64,10 +64,3 @@
 # state instead of `new`.
 - include_tasks: refresh_config.yml
   when: is_etcd_master
-
-- name: Install etcdctl binary from etcd role
-  include_tasks: install_host.yml
-  vars:
-    etcd_cluster_setup: true
-  when:
-    - etcd_kubeadm_enabled

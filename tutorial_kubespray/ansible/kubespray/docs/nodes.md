@@ -2,6 +2,58 @@
 
 Modified from [comments in #3471](https://github.com/kubernetes-sigs/kubespray/issues/3471#issuecomment-530036084)
 
+## Limitation: Removal of first kube_control_plane and etcd-master
+
+Currently you can't remove the first node in your kube_control_plane and etcd-master list. If you still want to remove this node you have to:
+
+### 1) Change order of current control planes
+
+Modify the order of your control plane list by pushing your first entry to any other position. E.g. if you want to remove `node-1` of the following example:
+
+```yaml
+  children:
+    kube_control_plane:
+      hosts:
+        node-1:
+        node-2:
+        node-3:
+    kube_node:
+      hosts:
+        node-1:
+        node-2:
+        node-3:
+    etcd:
+      hosts:
+        node-1:
+        node-2:
+        node-3:
+```
+
+change your inventory to:
+
+```yaml
+  children:
+    kube_control_plane:
+      hosts:
+        node-2:
+        node-3:
+        node-1:
+    kube_node:
+      hosts:
+        node-2:
+        node-3:
+        node-1:
+    etcd:
+      hosts:
+        node-2:
+        node-3:
+        node-1:
+```
+
+## 2) Upgrade the cluster
+
+run `upgrade-cluster.yml` or `cluster.yml`. Now you are good to go on with the removal.
+
 ## Adding/replacing a worker node
 
 This should be the easiest.
@@ -10,54 +62,28 @@ This should be the easiest.
 
 ### 2) Run `scale.yml`
 
-You can use `--limit=node1` to limit Kubespray to avoid disturbing other nodes in the cluster.
+You can use `--limit=NODE_NAME` to limit Kubespray to avoid disturbing other nodes in the cluster.
 
 Before using `--limit` run playbook `facts.yml` without the limit to refresh facts cache for all nodes.
 
-### 3) Drain the node that will be removed
-
-```sh
-kubectl drain NODE_NAME
-```
-
-### 4) Run the remove-node.yml playbook
+### 3) Remove an old node with remove-node.yml
 
 With the old node still in the inventory, run `remove-node.yml`. You need to pass `-e node=NODE_NAME` to the playbook to limit the execution to the node being removed.
 
-### 5) Remove the node from the inventory
+If the node you want to remove is not online, you should add `reset_nodes=false` and `allow_ungraceful_removal=true` to your extra-vars: `-e node=NODE_NAME -e reset_nodes=false -e allow_ungraceful_removal=true`.
+Use this flag even when you remove other types of nodes like a control plane or etcd nodes.
+
+### 4) Remove the node from the inventory
 
 That's it.
 
-## Adding/replacing a master node
+## Adding/replacing a control plane node
 
-### 1) Recreate apiserver certs manually to include the new master node in the cert SAN field
+### 1) Run `cluster.yml`
 
-For some reason, Kubespray will not update the apiserver certificate.
+Append the new host to the inventory and run `cluster.yml`. You can NOT use `scale.yml` for that.
 
-Edit `/etc/kubernetes/kubeadm-config.yaml`, include new host in `certSANs` list.
-
-Use kubeadm to recreate the certs.
-
-```sh
-cd /etc/kubernetes/ssl
-mv apiserver.crt apiserver.crt.old
-mv apiserver.key apiserver.key.old
-
-cd /etc/kubernetes
-kubeadm init phase certs apiserver --config kubeadm-config.yaml
-```
-
-Check the certificate, new host needs to be there.
-
-```sh
-openssl x509 -text -noout -in /etc/kubernetes/ssl/apiserver.crt
-```
-
-### 2) Run `cluster.yml`
-
-Add the new host to the inventory and run cluster.yml.
-
-### 3) Restart kube-system/nginx-proxy
+### 2) Restart kube-system/nginx-proxy
 
 In all hosts, restart nginx-proxy pod. This pod is a local proxy for the apiserver. Kubespray will update its static config, but it needs to be restarted in order to reload.
 
@@ -66,66 +92,91 @@ In all hosts, restart nginx-proxy pod. This pod is a local proxy for the apiserv
 docker ps | grep k8s_nginx-proxy_nginx-proxy | awk '{print $1}' | xargs docker restart
 ```
 
-### 4) Remove old master nodes
+### 3) Remove old control plane nodes
 
-If you are replacing a node, remove the old one from the inventory, and remove from the cluster runtime.
+With the old node still in the inventory, run `remove-node.yml`. You need to pass `-e node=NODE_NAME` to the playbook to limit the execution to the node being removed.
+If the node you want to remove is not online, you should add `reset_nodes=false` and `allow_ungraceful_removal=true` to your extra-vars.
 
-```sh
-kubectl drain NODE_NAME
-kubectl delete node NODE_NAME
+## Replacing a first control plane node
+
+### 1) Change control plane nodes order in inventory
+
+from
+
+```ini
+[kube_control_plane]
+ node-1
+ node-2
+ node-3
 ```
 
-After that, the old node can be safely shutdown. Also, make sure to restart nginx-proxy in all remaining nodes (step 3)
+to
 
-From any active master that remains in the cluster, re-upload `kubeadm-config.yaml`
-
-```sh
-kubeadm config upload from-file --config /etc/kubernetes/kubeadm-config.yaml
+```ini
+[kube_control_plane]
+ node-2
+ node-3
+ node-1
 ```
 
-## Adding/Replacing an etcd node
+### 2) Remove old first control plane node from cluster
+
+With the old node still in the inventory, run `remove-node.yml`. You need to pass `-e node=node-1` to the playbook to limit the execution to the node being removed.
+If the node you want to remove is not online, you should add `reset_nodes=false` and `allow_ungraceful_removal=true` to your extra-vars.
+
+### 3) Edit cluster-info configmap in kube-system namespace
+
+`kubectl  edit cm -n kube-public cluster-info`
+
+Change ip of old kube_control_plane node with ip of live kube_control_plane node (`server` field). Also, update `certificate-authority-data` field if you changed certs.
+
+### 4) Add new control plane node
+
+Update inventory (if needed)
+
+Run `cluster.yml` with `--limit=kube_control_plane`
+
+## Adding an etcd node
 
 You need to make sure there are always an odd number of etcd nodes in the cluster. In such a way, this is always a replace or scale up operation. Either add two new nodes or remove an old one.
 
 ### 1) Add the new node running cluster.yml
 
-Update the inventory and run `cluster.yml` passing `--limit=etcd,kube-master -e ignore_assert_errors=yes`.
+Update the inventory and run `cluster.yml` passing `--limit=etcd,kube_control_plane -e ignore_assert_errors=yes`.
+If the node you want to add as an etcd node is already a worker or control plane node in your cluster, you have to remove him first using `remove-node.yml`.
 
-Run `upgrade-cluster.yml` also passing `--limit=etcd,kube-master -e ignore_assert_errors=yes`. This is necessary to update all etcd configuration in the cluster.
+Run `upgrade-cluster.yml` also passing `--limit=etcd,kube_control_plane -e ignore_assert_errors=yes`. This is necessary to update all etcd configuration in the cluster.
 
-At this point, you will have an even number of nodes. Everything should still be working, and you should only have problems if the cluster decides to elect a new etcd leader before you remove a node. Even so, running applications should continue to be available.
+At this point, you will have an even number of nodes.
+Everything should still be working, and you should only have problems if the cluster decides to elect a new etcd leader before you remove a node.
+Even so, running applications should continue to be available.
 
-### 2) Remove an old etcd node
+If you add multiple etcd nodes with one run, you might want to append `-e etcd_retries=10` to increase the amount of retries between each etcd node join.
+Otherwise the etcd cluster might still be processing the first join and fail on subsequent nodes. `etcd_retries=10` might work to join 3 new nodes.
+
+### 2) Add the new node to apiserver config
+
+In every control plane node, edit `/etc/kubernetes/manifests/kube-apiserver.yaml`. Make sure the new etcd nodes are present in the apiserver command line parameter `--etcd-servers=...`.
+
+## Removing an etcd node
+
+### 1) Remove an old etcd node
 
 With the node still in the inventory, run `remove-node.yml` passing `-e node=NODE_NAME` as the name of the node that should be removed.
+If the node you want to remove is not online, you should add `reset_nodes=false` and `allow_ungraceful_removal=true` to your extra-vars.
 
-### 3) Make sure the remaining etcd members have their config updated
+### 2) Make sure only remaining nodes are in your inventory
 
-In each etcd host that remains in the cluster:
+Remove `NODE_NAME` from your inventory file.
 
-```sh
-cat /etc/etcd.env | grep ETCD_INITIAL_CLUSTER
-```
+### 3) Update kubernetes and network configuration files with the valid list of etcd members
 
-Only active etcd members should be in that list.
+Run `cluster.yml` to regenerate the configuration files on all remaining nodes.
 
-### 4) Remove old etcd members from the cluster runtime
+### 4) Remove the old etcd node from apiserver config
 
-Acquire a shell prompt into one of the etcd containers and use etcdctl to remove the old member.
+In every control plane node, edit `/etc/kubernetes/manifests/kube-apiserver.yaml`. Make sure only active etcd nodes are still present in the apiserver command line parameter `--etcd-servers=...`.
 
-```sh
-# list all members
-etcdctl member list
+### 5) Shutdown the old instance
 
-# remove old member
-etcdctl member remove MEMBER_ID
-# careful!!! if you remove a wrong member you will be in trouble
-
-# note: these command lines are actually much bigger, since you need to pass all certificates to etcdctl.
-```
-
-### 5) Make sure the apiserver config is correctly updated
-
-In every master node, edit `/etc/kubernetes/manifests/kube-apiserver.yaml`. Make sure only active etcd nodes are still present in the apiserver command line parameter `--etcd-servers=...`.
-
-### 6) Shutdown the old instance
+That's it.

@@ -16,20 +16,28 @@ spec:
         prometheus.io/port: "9090"
         prometheus.io/scrape: "true"
 {% endif %}
-        # This annotation plus the CriticalAddonsOnly toleration makes
-        # cilium to be a critical pod in the cluster, which ensures cilium
-        # gets priority scheduling.
-        # https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
-        scheduler.alpha.kubernetes.io/critical-pod: ""
         scheduler.alpha.kubernetes.io/tolerations: '[{"key":"dedicated","operator":"Equal","value":"master","effect":"NoSchedule"}]'
       labels:
         k8s-app: cilium
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: k8s-app
+                operator: In
+                values:
+                - cilium
+            topologyKey: kubernetes.io/hostname
       containers:
       - args:
         - --kvstore=etcd
         - --kvstore-opt=etcd.config=/var/lib/etcd-config/etcd.config
         - --config-dir=/tmp/cilium/config-map
+{% if cilium_mtu != "" %}
+        - --mtu={{ cilium_mtu }}
+{% endif %}
         command:
         - cilium-agent
         env:
@@ -45,6 +53,12 @@ spec:
               fieldPath: metadata.namespace
         - name: CILIUM_CLUSTERMESH_CONFIG
           value: /var/lib/cilium/clustermesh/
+{% if cilium_kube_proxy_replacement == 'strict' %}
+        - name: KUBERNETES_SERVICE_HOST
+          value: "{{ kube_apiserver_global_endpoint | urlsplit('hostname') }}"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "{{ kube_apiserver_global_endpoint | urlsplit('port') }}"
+{% endif %}
         image: "{{cilium_image_repo}}:{{cilium_image_tag}}"
         imagePullPolicy: {{ k8s_image_pull_policy }}
         resources:
@@ -64,11 +78,14 @@ spec:
               command:
               - /cni-uninstall.sh
         livenessProbe:
-          exec:
-            command:
-            - cilium
-            - status
-            - --brief
+          httpGet:
+            host: '127.0.0.1'
+            path: /healthz
+            port: 9876
+            scheme: HTTP
+            httpHeaders:
+            - name: "brief"
+              value: "true"
           failureThreshold: 10
           # The initial delay for the liveness probe is intentionally large to
           # avoid an endless kill & restart cycle if in the event that the initial
@@ -78,19 +95,30 @@ spec:
           successThreshold: 1
           timeoutSeconds: 5
         name: cilium-agent
-{% if cilium_enable_prometheus %}
+{% if cilium_enable_prometheus or cilium_enable_hubble_metrics %}
         ports:
+{% endif %}
+{% if cilium_enable_prometheus %}
         - containerPort: 9090
           hostPort: 9090
           name: prometheus
           protocol: TCP
 {% endif %}
+{% if cilium_enable_hubble_metrics %}
+        - containerPort: 9091
+          hostPort: 9091
+          name: hubble-metrics
+          protocol: TCP
+{% endif %}
         readinessProbe:
-          exec:
-            command:
-            - cilium
-            - status
-            - --brief
+          httpGet:
+            host: '127.0.0.1'
+            path: /healthz
+            port: 9876
+            scheme: HTTP
+            httpHeaders:
+            - name: "brief"
+              value: "true"
           failureThreshold: 3
           initialDelaySeconds: 5
           periodSeconds: 30
@@ -136,6 +164,18 @@ spec:
         - mountPath: /lib/modules
           name: lib-modules
           readOnly: true
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+{% if cilium_ipsec_enabled %}
+        - mountPath: /etc/ipsec
+          name: cilium-ipsec-secrets
+          readOnly: true
+{% endif %}
+{% if cilium_hubble_install %}
+        - mountPath: /var/lib/cilium/tls/hubble
+          name: hubble-tls
+          readOnly: true
+{% endif %}
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       hostPID: false
@@ -143,7 +183,7 @@ spec:
       - command:
         - /init-container.sh
         env:
-        - name: CLEAN_CILIUM_STATE
+        - name: CILIUM_ALL_STATE
           valueFrom:
             configMapKeyRef:
               key: clean-cilium-state
@@ -161,7 +201,11 @@ spec:
               key: wait-bpf-mount
               name: cilium-config
               optional: true
+{% if cilium_version | regex_replace('v') is version('1.9', '<') %}
         image: "{{cilium_init_image_repo}}:{{cilium_init_image_tag}}"
+{% else %}
+        image: "{{cilium_image_repo}}:{{cilium_image_tag}}"
+{% endif %}
         imagePullPolicy: {{ k8s_image_pull_policy }}
         name: clean-cilium-state
         securityContext:
@@ -174,6 +218,10 @@ spec:
           name: bpf-maps
         - mountPath: /var/run/cilium
           name: cilium-run
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
       priorityClassName: system-node-critical
       restartPolicy: Always
       serviceAccount: cilium
@@ -219,6 +267,11 @@ spec:
       - hostPath:
           path: /lib/modules
         name: lib-modules
+        # To access iptables concurrently with other processes (e.g. kube-proxy)
+      - hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+        name: xtables-lock
         # To read the etcd config stored in config maps
       - configMap:
           defaultMode: 420
@@ -241,6 +294,30 @@ spec:
       - configMap:
           name: cilium-config
         name: cilium-config-path
+{% if cilium_ipsec_enabled %}
+      - name: cilium-ipsec-secrets
+        secret:
+          secretName: cilium-ipsec-keys
+{% endif %}
+{% if cilium_hubble_install %}
+      - name: hubble-tls
+        projected:
+          sources:
+          - secret:
+              name: hubble-server-certs
+              items:
+                - key: tls.crt
+                  path: server.crt
+                - key: tls.key
+                  path: server.key
+              optional: true
+          - configMap:
+              name: hubble-ca-cert
+              items:
+                - key: ca.crt
+                  path: client-ca.crt
+              optional: true
+{% endif %}
   updateStrategy:
     rollingUpdate:
       # Specifies the maximum number of Pods that can be unavailable during the update process.
