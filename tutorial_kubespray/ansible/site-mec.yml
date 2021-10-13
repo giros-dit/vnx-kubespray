@@ -20,3 +20,18 @@
     roles:
       - nginx-ingress
     tags: nginx-ingress
+
+  - hosts: kube-master[0]
+    roles:
+      - helm-operator
+    tags: helm-operator
+
+  - hosts: kube-master[0]
+    roles:
+      - openfaas
+    tags: openfaas
+
+  - hosts: k8s-cluster
+    roles:
+      - helm-wrapper
+    tags: helm-wrapper
