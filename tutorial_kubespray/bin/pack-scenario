@@ -1,0 +1,15 @@
+#!/bin/bash
+
+SCENARIO=k8s_lab.xml
+VERS='01'
+
+# Move to the upper directory where this script is
+cdir=$( dirname $0 )
+cd $cdir/..
+
+vnx --pack $SCENARIO \
+    --pack-version $VERS \
+    --pack-add-files \
+        00-readme-k8s_lab.txt ansible/kubespray/requirements.txt \
+    $1 $2 $3
+
