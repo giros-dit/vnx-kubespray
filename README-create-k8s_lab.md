@@ -1,6 +1,6 @@
 # k8s_lab
 
-VNX scenario using images with Kubernetes already installed using Kubespray
+VNX kubespray scenario using consolidated virtual machines images with Kubernetes already installed (no need to run kubespray playbook)
 
 ## Scenario topology
 
