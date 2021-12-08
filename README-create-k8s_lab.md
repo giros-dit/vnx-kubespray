@@ -1,6 +1,6 @@
 # k8s_lab
 
-VNX kubespray scenario using consolidated virtual machines images with Kubernetes already installed (no need to run kubespray playbook)
+VNX kubespray scenario using consolidated virtual machine images with Kubernetes already installed (no need to run kubespray playbook)
 
 ## Scenario topology
 
@@ -15,7 +15,7 @@ K8s nodes are deployed as KVM virtual machines whereas r1 and h1 are LXC contain
 - Internet connection
 - Hardware requirments: minimum 4GB RAM and 4 CPU cores
 
-## Setup
+## Installation
 
 Get and unpack VNX scenario:
 
@@ -24,13 +24,16 @@ wget http://idefix.dit.upm.es/download/vnx/examples/k8s/k8s_lab-v01.tgz
 sudo vnx --unpack k8s_lab-v01.tgz
 ```
 
+## Starting the scenario
+
 Start it with:
 
 ```bash
+cd k8s_lab-v01
 sudo vnx -f k8s_lab.xml --create
 ```
 
-The cluster starts with only with the master node. To add the two worker nodes:
+The cluster starts only with the master node. To add the two worker nodes:
 
 ```bash
 sudo vnx -f k8s_lab.xml -x add-worker1,add-worker2
@@ -43,7 +46,7 @@ JOINCMD=$(kubeadm token create --print-join-command | sed 's/127.0.0.1/10.10.10.
 ssh 10.10.10.11 "$JOINCMD"
 ```
 
-# Creation recipe
+## Creation recipe
 
 Download vnx-kubespray:
 
@@ -107,7 +110,7 @@ ssh k8s-master rm /root/.bash_history
 ssh k8s-worker1 rm /root/.bash_history
 ```
 
-Shuthdown the scenario and create the new virtual machine images: 
+Shutdown the scenario and create the new virtual machine images: 
 
 ```bash
 cd ..
