@@ -136,14 +136,14 @@ rm tmp-diff-worker.qcow2
 
 # r1 image
 VNXDIR=$( cat /etc/vnx.conf | grep -v ^# | grep vnx_dir | cut -d "=" -f 2 | sed -e "s,~,${HOME}," )
-CONTROLLERDIR=${VNXDIR}/scenarios/tutorial_kubespray/vms/r1
-pushd $CONTROLLERDIR
+R1DIR=${VNXDIR}/scenarios/tutorial_kubespray/vms/r1
+pushd $R1DIR
 tmpfile=$(mktemp)
 find mnt/ -type s > $tmpfile
 ROOTFSNAME=vnx_rootfs_lxc_ubuntu64-18.04-v025-k8s
 LANG=C tar --numeric-owner -cpf - mnt -X $tmpfile --transform "s|^mnt|${ROOTFSNAME}|" | gzip > ${ROOTFSNAME}.tgz
 popd
-mv $CONTROLLERDIR/${ROOTFSNAME}.tgz .
+mv $R1DIR/${ROOTFSNAME}.tgz .
 tar --numeric-owner -xzpf vnx_rootfs_lxc_ubuntu64-18.04-v025-k8s.tgz
 ln -s  ${ROOTFSNAME} rootfs_k8s_r1
 ```
