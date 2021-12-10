@@ -110,7 +110,7 @@ SPAIN
 
   <vm name="r1" type="lxc" arch="x86_64">
     <mem>1G</mem>
-    <filesystem type="cow">/usr/share/vnx/filesystems/rootfs_lxc_ubuntu64</filesystem>
+    <filesystem type="cow">filesystems/rootfs_k8s_r1</filesystem>
     <forwarding type="ip" />
     <if id="1" net="k8s_LAN">
       <ipv4>10.10.10.1/24</ipv4>
