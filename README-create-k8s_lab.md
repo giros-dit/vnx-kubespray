@@ -133,8 +133,20 @@ cp $VNXDIR/scenarios/tutorial_kubespray/vms/k8s-worker1/fs/root_cow_fs tmp-diff-
 qemu-img rebase -b vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-worker.qcow2 tmp-diff-worker.qcow2
 qemu-img commit tmp-diff-worker.qcow2
 rm tmp-diff-worker.qcow2
-```
 
+# r1 image
+VNXDIR=$( cat /etc/vnx.conf | grep -v ^# | grep vnx_dir | cut -d "=" -f 2 | sed -e "s,~,${HOME}," )
+R1DIR=${VNXDIR}/scenarios/tutorial_kubespray/vms/r1
+pushd $R1DIR
+tmpfile=$(mktemp)
+find mnt/ -type s > $tmpfile
+ROOTFSNAME=vnx_rootfs_lxc_ubuntu64-18.04-v025-k8s
+LANG=C tar --numeric-owner -cpf - mnt -X $tmpfile --transform "s|^mnt|${ROOTFSNAME}|" | gzip > ${ROOTFSNAME}.tgz
+popd
+mv $R1DIR/${ROOTFSNAME}.tgz .
+tar --numeric-owner -xzpf vnx_rootfs_lxc_ubuntu64-18.04-v025-k8s.tgz
+ln -s  ${ROOTFSNAME} rootfs_k8s_r1
+```
 Release the scenario:
 ```bash
 cd ..
