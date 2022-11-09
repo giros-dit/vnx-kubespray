@@ -120,7 +120,7 @@ mkdir -p filesystems && cd filesystems
 
 # master image
 cp /usr/share/vnx/filesystems/vnx_rootfs_kvm_ubuntu64-18.04-v025.qcow2 vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-master.qcow2
-VNXDIR=$( cat /etc/vnx.conf | grep -v ^# | grep vnx_dir | cut -d "=" -f 2 | sed -e "s,~,${HOME}," )
+VNXDIR=$( vnx -V | grep "VNX dir" | cut -d "=" -f 2 | sed -e "s,~,${HOME}," )
 cp $VNXDIR/scenarios/tutorial_kubespray/vms/k8s-master/fs/root_cow_fs tmp-diff-master.qcow2
 qemu-img rebase -b vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-master.qcow2 tmp-diff-master.qcow2
 qemu-img commit tmp-diff-master.qcow2
