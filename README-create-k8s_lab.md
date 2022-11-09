@@ -128,14 +128,12 @@ rm tmp-diff-master.qcow2
 
 # worker image
 cp /usr/share/vnx/filesystems/vnx_rootfs_kvm_ubuntu64-18.04-v025.qcow2 vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-worker.qcow2
-VNXDIR=$( cat /etc/vnx.conf | grep -v ^# | grep vnx_dir | cut -d "=" -f 2 | sed -e "s,~,${HOME}," )
 cp $VNXDIR/scenarios/tutorial_kubespray/vms/k8s-worker1/fs/root_cow_fs tmp-diff-worker.qcow2
 qemu-img rebase -b vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-worker.qcow2 tmp-diff-worker.qcow2
 qemu-img commit tmp-diff-worker.qcow2
 rm tmp-diff-worker.qcow2
 
 # r1 image
-VNXDIR=$( cat /etc/vnx.conf | grep -v ^# | grep vnx_dir | cut -d "=" -f 2 | sed -e "s,~,${HOME}," )
 R1DIR=${VNXDIR}/scenarios/tutorial_kubespray/vms/r1
 pushd $R1DIR
 tmpfile=$(mktemp)
