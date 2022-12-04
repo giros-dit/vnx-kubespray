@@ -138,11 +138,11 @@ R1DIR=${VNXDIR}/scenarios/tutorial_kubespray/vms/r1
 pushd $R1DIR
 tmpfile=$(mktemp)
 find mnt/ -type s > $tmpfile
-ROOTFSNAME=vnx_rootfs_lxc_ubuntu64-18.04-v025-k8s
+ROOTFSNAME=vnx_rootfs_lxc_ubuntu64-20.04-v025-k8s
 LANG=C tar --numeric-owner -cpf - mnt -X $tmpfile --transform "s|^mnt|${ROOTFSNAME}|" | gzip > ${ROOTFSNAME}.tgz
 popd
 mv $R1DIR/${ROOTFSNAME}.tgz .
-tar --numeric-owner -xzpf vnx_rootfs_lxc_ubuntu64-18.04-v025-k8s.tgz
+tar --numeric-owner -xzpf vnx_rootfs_lxc_ubuntu64-20.04-v025-k8s.tgz
 ln -s  ${ROOTFSNAME} rootfs_k8s_r1
 ```
 Release the scenario:
