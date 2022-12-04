@@ -119,17 +119,17 @@ sudo vnx -f tutorial_kubespray.xml -v --shutdown
 mkdir -p filesystems && cd filesystems
 
 # master image
-cp /usr/share/vnx/filesystems/vnx_rootfs_kvm_ubuntu64-18.04-v025.qcow2 vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-master.qcow2
+cp /usr/share/vnx/filesystems/vnx_rootfs_kvm_ubuntu64-20.04-v025.qcow2 vnx_rootfs_kvm_ubuntu64-20.04-v025-k8s-master.qcow2
 VNXDIR=$( vnx -V | grep "VNX dir" | cut -d "=" -f 2 | sed -e "s,~,${HOME}," )
 cp $VNXDIR/scenarios/tutorial_kubespray/vms/k8s-master/fs/root_cow_fs tmp-diff-master.qcow2
-qemu-img rebase -b vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-master.qcow2 tmp-diff-master.qcow2
+qemu-img rebase -b vnx_rootfs_kvm_ubuntu64-20.04-v025-k8s-master.qcow2 tmp-diff-master.qcow2
 qemu-img commit tmp-diff-master.qcow2
 rm tmp-diff-master.qcow2
 
 # worker image
-cp /usr/share/vnx/filesystems/vnx_rootfs_kvm_ubuntu64-18.04-v025.qcow2 vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-worker.qcow2
+cp /usr/share/vnx/filesystems/vnx_rootfs_kvm_ubuntu64-20.04-v025.qcow2 vnx_rootfs_kvm_ubuntu64-20.04-v025-k8s-worker.qcow2
 cp $VNXDIR/scenarios/tutorial_kubespray/vms/k8s-worker1/fs/root_cow_fs tmp-diff-worker.qcow2
-qemu-img rebase -b vnx_rootfs_kvm_ubuntu64-18.04-v025-k8s-worker.qcow2 tmp-diff-worker.qcow2
+qemu-img rebase -b vnx_rootfs_kvm_ubuntu64-20.04-v025-k8s-worker.qcow2 tmp-diff-worker.qcow2
 qemu-img commit tmp-diff-worker.qcow2
 rm tmp-diff-worker.qcow2
 
