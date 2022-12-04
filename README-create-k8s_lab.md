@@ -143,6 +143,7 @@ LANG=C tar --numeric-owner -cpf - mnt -X $tmpfile --transform "s|^mnt|${ROOTFSNA
 popd
 mv $R1DIR/${ROOTFSNAME}.tgz .
 tar --numeric-owner -xzpf vnx_rootfs_lxc_ubuntu64-20.04-v025-k8s.tgz
+rm -f rootfs_k8s_r1
 ln -s  ${ROOTFSNAME} rootfs_k8s_r1
 ```
 Release the scenario:
