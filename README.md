@@ -4,7 +4,7 @@ VNX scenario that deploys a production-ready three-node Kubernetes cluster using
 
 ![kubespray](tutorial_kubespray/docs/kubespray-logo.png)
 
-For this version of the scenario [Flannel CNI](https://github.com/flannel-io/flannel) network plugin is used.
+For this version of the scenario [Weave CNI](https://github.com/weaveworks/weave) network plugin is used.
 
 ## Scenario topology
 
@@ -86,41 +86,40 @@ This is how Ansible would access the nodes in the scenario.
 ## Checking cluster operation
 - Cluster node availability:
 ```bash
-kubectl get nodes
-NAME          STATUS   ROLES           AGE   VERSION
-k8s-master    Ready    control-plane   15m   v1.26.1
-k8s-worker1   Ready    <none>          13m   v1.26.1
-k8s-worker2   Ready    <none>          13m   v1.26.1
+root@k8s-master:~# kubectl get nodes
+NAME          STATUS   ROLES                  AGE    VERSION
+k8s-master    Ready    control-plane,master   5m1s   v1.21.5
+k8s-worker1   Ready    <none>                 4m     v1.21.5
+k8s-worker2   Ready    <none>                 4m     v1.21.5
 ```
 
 - Kubernetes system pods status:
 ```bash
-kubectl get pods -n kube-system
+root@k8s-master:~# kubectl get pod -n kube-system
 NAME                                 READY   STATUS    RESTARTS   AGE
-coredns-8474476ff8-bgbsk             1/1     Running   0          43m
-coredns-8474476ff8-hg7fh             1/1     Running   0          43m
-dns-autoscaler-7df78bfcfb-zchrw      1/1     Running   0          43m
-kube-apiserver-k8s-master            1/1     Running   0          45m
-kube-controller-manager-k8s-master   1/1     Running   0          45m
-kube-flannel-c2f8h                   1/1     Running   0          44m
-kube-flannel-nzbfw                   1/1     Running   0          44m
-kube-flannel-pwzrd                   1/1     Running   0          44m
-kube-multus-ds-amd64-6nqmf           1/1     Running   0          44m
-kube-multus-ds-amd64-8bqbm           1/1     Running   0          44m
-kube-multus-ds-amd64-qh5gb           1/1     Running   0          44m
-kube-proxy-7d688                     1/1     Running   0          44m
-kube-proxy-fvb2c                     1/1     Running   0          44m
-kube-proxy-wslw8                     1/1     Running   0          44m
-kube-scheduler-k8s-master            1/1     Running   0          45m
-nginx-proxy-k8s-worker1              1/1     Running   0          44m
-nginx-proxy-k8s-worker2              1/1     Running   0          44m
-nodelocaldns-b5nkp                   1/1     Running   0          43m
-nodelocaldns-htsjr                   1/1     Running   0          43m
-nodelocaldns-tx97n                   1/1     Running   0          43m
-registry-n4jfj                       1/1     Running   0          43m
-registry-proxy-dw2jq                 1/1     Running   0          43m
-registry-proxy-whlbp                 1/1     Running   0          43m
-```
+coredns-8474476ff8-glzr8             1/1     Running   0          2m41s
+coredns-8474476ff8-jqdhs             1/1     Running   0          2m44s
+dns-autoscaler-7df78bfcfb-dz7j9      1/1     Running   0          2m42s
+kube-apiserver-k8s-master            1/1     Running   0          4m26s
+kube-controller-manager-k8s-master   1/1     Running   0          4m25s
+kube-multus-ds-amd64-2v24m           1/1     Running   0          2m59s
+kube-multus-ds-amd64-6qxrd           1/1     Running   0          2m59s
+kube-multus-ds-amd64-nllbv           1/1     Running   0          2m59s
+kube-proxy-65bm4                     1/1     Running   0          3m25s
+kube-proxy-bpc55                     1/1     Running   0          3m25s
+kube-proxy-wpnxq                     1/1     Running   0          3m25s
+kube-scheduler-k8s-master            1/1     Running   0          4m26s
+nginx-proxy-k8s-worker1              1/1     Running   0          3m26s
+nginx-proxy-k8s-worker2              1/1     Running   0          3m26s
+nodelocaldns-5vlp4                   1/1     Running   0          2m41s
+nodelocaldns-cnwpb                   1/1     Running   0          2m41s
+nodelocaldns-ppx4z                   1/1     Running   0          2m41s
+registry-krl7p                       1/1     Running   0          2m32s
+registry-proxy-qfzd9                 1/1     Running   0          2m31s
+registry-proxy-tbvzz                 1/1     Running   0          2m31s
+weave-net-clw5m                      2/2     Running   0          3m12s
+weave-net-k7swf                      2/2     Running   0          3m12s
+weave-net-vv2c9                      2/2     Running   1          3m12s
 
 > *Note*: The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
   

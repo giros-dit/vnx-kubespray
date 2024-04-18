@@ -64,12 +64,8 @@ credentials_dir: "{{ inventory_dir }}/credentials"
 
 # Choose network plugin (cilium, calico, weave or flannel. Use cni for generic cni plugin)
 # Can also be set to 'cloud', which lets the cloud provider setup appropriate routing
-kube_network_plugin: flannel
-#kube_network_plugin: weave
-flannel_backend_type: "vxlan"
-flannel_vxlan_vni: 1
-flannel_vxlan_port: 8472
-flannel_interface: eth1
+#kube_network_plugin: calico
+kube_network_plugin: weave
 
 # Setting multi_networking to true will install Multus: https://github.com/intel/multus-cni
 kube_network_plugin_multus: true
@@ -329,12 +325,12 @@ auto_renew_certificates: false
 ##
 
 # Calico
-calico_datastore: "etcd"
+#calico_datastore: "etcd"
 
 ## Change autodetection method for node configuration
 ## https://docs.projectcalico.org/reference/node/configuration#ip-setting
 ## Force config to pick LAN interface 
-calico_ip_auto_method: "interface=eth1"
+#calico_ip_auto_method: "interface=eth1"
 
 ## Advertise ServiceIP CIDR (DEPRECATED: Waiting for Kubespray update)
 # calico_advertise_cluster_ips: true
