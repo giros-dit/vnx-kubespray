@@ -86,16 +86,16 @@ This is how Ansible would access the nodes in the scenario.
 ## Checking cluster operation
 - Cluster node availability:
 ```bash
-kubectl get nodes
-NAME          STATUS   ROLES           AGE   VERSION
-k8s-master    Ready    control-plane   15m   v1.26.1
-k8s-worker1   Ready    <none>          13m   v1.26.1
-k8s-worker2   Ready    <none>          13m   v1.26.1
+root@k8s-master:~# kubectl get nodes
+NAME          STATUS   ROLES                  AGE    VERSION
+k8s-master    Ready    control-plane,master   5m1s   v1.21.5
+k8s-worker1   Ready    <none>                 4m     v1.21.5
+k8s-worker2   Ready    <none>                 4m     v1.21.5
 ```
 
 - Kubernetes system pods status:
 ```bash
-kubectl get pods -n kube-system
+root@k8s-master:~# kubectl get pods -n kube-system
 NAME                                 READY   STATUS    RESTARTS   AGE
 coredns-8474476ff8-bgbsk             1/1     Running   0          43m
 coredns-8474476ff8-hg7fh             1/1     Running   0          43m
