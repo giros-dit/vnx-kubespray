@@ -39,7 +39,7 @@ spec:
         - --run-firewall={{ kube_router_run_firewall | bool }}
         - --run-service-proxy={{ kube_router_run_service_proxy | bool }}
         - --kubeconfig=/var/lib/kube-router/kubeconfig
-        - --bgp-graceful-restart=true
+        - --bgp-graceful-restart={{ kube_router_bgp_graceful_restart }}
 {% if kube_router_advertise_cluster_ip %}
         - --advertise-cluster-ip
 {% endif %}
@@ -48,6 +48,9 @@ spec:
 {% endif %}
 {% if kube_router_advertise_loadbalancer_ip %}
         - --advertise-loadbalancer-ip
+{% endif %}
+{% if kube_router_cluster_asn %}
+        - --cluster-asn={{ kube_router_cluster_asn }}
 {% endif %}
 {% if kube_router_peer_router_asns %}
         - --peer-router-asns={{ kube_router_peer_router_asns }}
@@ -61,6 +64,14 @@ spec:
 {% if kube_router_enable_metrics %}
         - --metrics-path={{ kube_router_metrics_path }}
         - --metrics-port={{ kube_router_metrics_port }}
+{% endif %}
+{% if kube_router_enable_dsr %}
+{% if container_manager == "docker" %}
+        - --runtime-endpoint=unix:///var/run/docker.sock
+{% endif %}
+{% if container_manager == "containerd" %}
+{% endif %}
+        - --runtime-endpoint=unix:///run/containerd/containerd.sock
 {% endif %}
 {% for arg in kube_router_extra_args %}
         - "{{ arg }}"
@@ -86,9 +97,16 @@ spec:
           privileged: true
         volumeMounts:
 {% if kube_router_enable_dsr %}
+{% if container_manager == "docker" %}
         - name: docker-socket
           mountPath: /var/run/docker.sock
           readOnly: true
+{% endif %}
+{% if container_manager == "containerd" %}
+        - name: containerd-socket
+          mountPath: /run/containerd/containerd.sock
+          readOnly: true
+{% endif %}
 {% endif %}
         - name: lib-modules
           mountPath: /lib/modules
@@ -118,10 +136,18 @@ spec:
       - operator: Exists
       volumes:
 {% if kube_router_enable_dsr %}
+{% if container_manager == "docker" %}
       - name: docker-socket
         hostPath:
           path: /var/run/docker.sock
           type: Socket
+{% endif %}
+{% if container_manager == "containerd" %}
+      - name: containerd-socket
+        hostPath:
+          path: /run/containerd/containerd.sock
+          type: Socket
+{% endif %}
 {% endif %}
       - name: lib-modules
         hostPath:
@@ -152,7 +178,7 @@ metadata:
   namespace: kube-system
 rules:
   - apiGroups:
-    - ""
+      - ""
     resources:
       - namespaces
       - pods
@@ -164,7 +190,7 @@ rules:
       - get
       - watch
   - apiGroups:
-    - "networking.k8s.io"
+      - "networking.k8s.io"
     resources:
       - networkpolicies
     verbs:
@@ -172,9 +198,17 @@ rules:
       - get
       - watch
   - apiGroups:
-    - extensions
+      - extensions
     resources:
       - networkpolicies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
     verbs:
       - get
       - list

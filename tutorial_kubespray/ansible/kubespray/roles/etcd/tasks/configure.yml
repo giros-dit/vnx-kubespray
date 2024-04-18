@@ -8,11 +8,13 @@
   changed_when: false
   check_mode: no
   run_once: yes
-  when: is_etcd_master and etcd_cluster_setup
+  when:
+    - is_etcd_master
+    - etcd_cluster_setup
   tags:
     - facts
   environment:
-    ETCDCTL_API: 3
+    ETCDCTL_API: "3"
     ETCDCTL_CERT: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}.pem"
     ETCDCTL_KEY: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}-key.pem"
     ETCDCTL_CACERT: "{{ etcd_cert_dir }}/ca.pem"
@@ -27,17 +29,20 @@
   changed_when: false
   check_mode: no
   run_once: yes
-  when: is_etcd_master and etcd_events_cluster_setup
+  when:
+    - is_etcd_master
+    - etcd_events_cluster_setup
   tags:
     - facts
   environment:
-    ETCDCTL_API: 3
+    ETCDCTL_API: "3"
     ETCDCTL_CERT: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}.pem"
     ETCDCTL_KEY: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}-key.pem"
     ETCDCTL_CACERT: "{{ etcd_cert_dir }}/ca.pem"
     ETCDCTL_ENDPOINTS: "{{ etcd_events_access_addresses }}"
 
-- include_tasks: refresh_config.yml
+- name: Configure | Refresh etcd config
+  include_tasks: refresh_config.yml
   when: is_etcd_master
 
 - name: Configure | Copy etcd.service systemd file
@@ -46,6 +51,9 @@
     dest: /etc/systemd/system/etcd.service
     backup: yes
     mode: 0644
+    # FIXME: check that systemd version >= 250 (factory-reset.target was introduced in that release)
+    # Remove once we drop support for systemd < 250
+    validate: "sh -c '[ -f /usr/bin/systemd/system/factory-reset.target ] || exit 0 && systemd-analyze verify %s:etcd-{{ etcd_deployment_type }}.service'"
   when: is_etcd_master and etcd_cluster_setup
 
 - name: Configure | Copy etcd-events.service systemd file
@@ -54,6 +62,9 @@
     dest: /etc/systemd/system/etcd-events.service
     backup: yes
     mode: 0644
+    validate: "sh -c '[ -f /usr/bin/systemd/system/factory-reset.target ] || exit 0 && systemd-analyze verify %s:etcd-events-{{ etcd_deployment_type }}.service'"
+    # FIXME: check that systemd version >= 250 (factory-reset.target was introduced in that release)
+    # Remove once we drop support for systemd < 250
   when: is_etcd_master and etcd_events_cluster_setup
 
 - name: Configure | reload systemd
@@ -96,7 +107,7 @@
   tags:
     - facts
   environment:
-    ETCDCTL_API: 3
+    ETCDCTL_API: "3"
     ETCDCTL_CERT: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}.pem"
     ETCDCTL_KEY: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}-key.pem"
     ETCDCTL_CACERT: "{{ etcd_cert_dir }}/ca.pem"
@@ -119,14 +130,14 @@
   tags:
     - facts
   environment:
-    ETCDCTL_API: 3
+    ETCDCTL_API: "3"
     ETCDCTL_CERT: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}.pem"
     ETCDCTL_KEY: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}-key.pem"
     ETCDCTL_CACERT: "{{ etcd_cert_dir }}/ca.pem"
     ETCDCTL_ENDPOINTS: "{{ etcd_events_access_addresses }}"
 
 - name: Configure | Check if member is in etcd cluster
-  shell: "{{ bin_dir }}/etcdctl member list | grep -q {{ etcd_access_address }}"
+  shell: "{{ bin_dir }}/etcdctl member list | grep -w -q {{ etcd_access_address }}"
   register: etcd_member_in_cluster
   ignore_errors: true  # noqa ignore-errors
   changed_when: false
@@ -135,14 +146,14 @@
   tags:
     - facts
   environment:
-    ETCDCTL_API: 3
+    ETCDCTL_API: "3"
     ETCDCTL_CERT: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}.pem"
     ETCDCTL_KEY: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}-key.pem"
     ETCDCTL_CACERT: "{{ etcd_cert_dir }}/ca.pem"
     ETCDCTL_ENDPOINTS: "{{ etcd_access_addresses }}"
 
 - name: Configure | Check if member is in etcd-events cluster
-  shell: "{{ bin_dir }}/etcdctl member list | grep -q {{ etcd_access_address }}"
+  shell: "{{ bin_dir }}/etcdctl member list | grep -w -q {{ etcd_access_address }}"
   register: etcd_events_member_in_cluster
   ignore_errors: true  # noqa ignore-errors
   changed_when: false
@@ -151,7 +162,7 @@
   tags:
     - facts
   environment:
-    ETCDCTL_API: 3
+    ETCDCTL_API: "3"
     ETCDCTL_CERT: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}.pem"
     ETCDCTL_KEY: "{{ etcd_cert_dir }}/admin-{{ inventory_hostname }}-key.pem"
     ETCDCTL_CACERT: "{{ etcd_cert_dir }}/ca.pem"

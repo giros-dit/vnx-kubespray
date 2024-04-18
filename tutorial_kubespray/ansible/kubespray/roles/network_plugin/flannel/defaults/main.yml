@@ -2,7 +2,7 @@
 # Flannel public IP
 # The address that flannel should advertise as how to access the system
 # Disabled until https://github.com/coreos/flannel/issues/712 is fixed
-# flannel_public_ip: "{{ access_ip|default(ip|default(fallback_ips[inventory_hostname])) }}"
+# flannel_public_ip: "{{ access_ip | default(ip | default(fallback_ips[inventory_hostname])) }}"
 
 ## interface that should be used for flannel operations
 ## This is actually an inventory cluster-level item
@@ -19,6 +19,7 @@
 flannel_backend_type: "vxlan"
 flannel_vxlan_vni: 1
 flannel_vxlan_port: 8472
+flannel_vxlan_direct_routing: false
 
 # Limits for apps
 flannel_memory_limit: 500M

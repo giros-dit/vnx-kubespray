@@ -28,6 +28,7 @@ variable "machines" {
 
   type = map(object({
     node_type = string
+    plan      = string
     cpu       = string
     mem       = string
     disk_size = number
@@ -53,4 +54,96 @@ variable "UPCLOUD_USERNAME" {
 
 variable "UPCLOUD_PASSWORD" {
   description = "Password for UpCloud API user"
+}
+
+variable "firewall_enabled" {
+  description = "Enable firewall rules"
+  default     = false
+}
+
+variable "master_allowed_remote_ips" {
+  description = "List of IP start/end addresses allowed to access API of masters"
+  type = list(object({
+    start_address = string
+    end_address   = string
+  }))
+  default = []
+}
+
+variable "k8s_allowed_remote_ips" {
+  description = "List of IP start/end addresses allowed to SSH to hosts"
+  type = list(object({
+    start_address = string
+    end_address   = string
+  }))
+  default = []
+}
+
+variable "master_allowed_ports" {
+  description = "List of ports to allow on masters"
+  type = list(object({
+    protocol       = string
+    port_range_min = number
+    port_range_max = number
+    start_address  = string
+    end_address    = string
+  }))
+}
+
+variable "worker_allowed_ports" {
+  description = "List of ports to allow on workers"
+  type = list(object({
+    protocol       = string
+    port_range_min = number
+    port_range_max = number
+    start_address  = string
+    end_address    = string
+  }))
+}
+
+variable "firewall_default_deny_in" {
+  description = "Add firewall policies that deny all inbound traffic by default"
+  default     = false
+}
+
+variable "firewall_default_deny_out" {
+  description = "Add firewall policies that deny all outbound traffic by default"
+  default     = false
+}
+
+variable "loadbalancer_enabled" {
+  description = "Enable load balancer"
+  default     = false
+}
+
+variable "loadbalancer_plan" {
+  description = "Load balancer plan (development/production-small)"
+  default     = "development"
+}
+
+variable "loadbalancer_proxy_protocol" {
+  type    = bool
+  default = false
+}
+
+variable "loadbalancers" {
+  description = "Load balancers"
+
+  type = map(object({
+    port            = number
+    target_port     = number
+    backend_servers = list(string)
+  }))
+  default = {}
+}
+
+variable "server_groups" {
+  description = "Server groups"
+
+  type = map(object({
+    anti_affinity_policy = string
+    servers              = list(string)
+  }))
+
+  default = {}
 }

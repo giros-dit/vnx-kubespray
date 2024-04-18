@@ -1,9 +1,15 @@
 [Resolve]
-DNS={{ coredns_server | list | join(' ') }}
-FallbackDNS={{ ( nameservers|d([]) + cloud_resolver|d([])) | unique | join(' ') }}
+{% if not dns_early and dns_late %}
+DNS={{ ([nodelocaldns_ip] if enable_nodelocaldns else coredns_server )| list | join(' ') }}
+{% endif %}
+FallbackDNS={{ ( upstream_dns_servers|d([]) + nameservers|d([]) + cloud_resolver|d([])) | unique | join(' ') }}
+{% if remove_default_searchdomains and searchdomains|default([])|length != 0 %}
+Domains={{ searchdomains|default([]) | join(' ') }}
+{% else %}
 Domains={{ ([ 'default.svc.' + dns_domain, 'svc.' + dns_domain ] + searchdomains|default([])) | join(' ') }}
-#LLMNR=no
-#MulticastDNS=no
+{% endif %}
 DNSSEC=no
 Cache=no-negative
-#DNSStubListener=yes
+{% if systemd_resolved_disable_stub_listener | bool %}
+DNSStubListener=no
+{% endif %}

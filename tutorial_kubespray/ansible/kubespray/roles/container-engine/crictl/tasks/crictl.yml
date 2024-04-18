@@ -1,5 +1,5 @@
 ---
-- name: crictl | Download crictl
+- name: Crictl | Download crictl
   include_tasks: "../../../download/tasks/download_file.yml"
   vars:
     download: "{{ download_defaults | combine(downloads.crictl) }}"
@@ -20,7 +20,3 @@
   notify:
     - Get crictl completion
     - Install crictl completion
-
-- name: Set fact crictl_installed
-  set_fact:
-    crictl_installed: true

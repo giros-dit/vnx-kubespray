@@ -1,9 +1,6 @@
 ---
-# change to 0.0.0.0 to enable insecure access from anywhere (not recommended)
-kube_apiserver_insecure_bind_address: 127.0.0.1
-
 # advertised host IP for kubelet. This affects network plugin config. Take caution
-kubelet_address: "{{ ip | default(fallback_ips[inventory_hostname]) }}"
+kubelet_address: "{{ ip | default(fallback_ips[inventory_hostname]) }}{{ (',' + ip6) if enable_dual_stack_networks and ip6 is defined else '' }}"
 
 # bind address for kubelet. Set to 0.0.0.0 to listen on all interfaces
 kubelet_bind_address: "{{ ip | default('0.0.0.0') }}"
@@ -14,36 +11,93 @@ kube_resolv_conf: "/etc/resolv.conf"
 # Set to empty to avoid cgroup creation
 kubelet_enforce_node_allocatable: "\"\""
 
-# Set runtime cgroups
-kubelet_runtime_cgroups: "/systemd/system.slice"
-# Set kubelet cgroups
-kubelet_kubelet_cgroups: "/systemd/system.slice"
+# Set runtime and kubelet cgroups when using systemd as cgroup driver (default)
+kube_service_cgroups: "{% if kube_reserved %}{{ kube_reserved_cgroups_for_service_slice }}{% else %}system.slice{% endif %}"
+kubelet_runtime_cgroups: "/{{ kube_service_cgroups }}/{{ container_manager }}.service"
+kubelet_kubelet_cgroups: "/{{ kube_service_cgroups }}/kubelet.service"
 
-### fail with swap on (default true)
-kubelet_fail_swap_on: true
+# Set runtime and kubelet cgroups when using cgroupfs as cgroup driver
+kubelet_runtime_cgroups_cgroupfs: "/system.slice/{{ container_manager }}.service"
+kubelet_kubelet_cgroups_cgroupfs: "/system.slice/kubelet.service"
+
+# Set systemd service hardening features
+kubelet_systemd_hardening: false
+
+# List of secure IPs for kubelet
+kube_node_addresses: >-
+  {%- for host in (groups['kube_control_plane'] + groups['kube_node'] + groups['etcd']) | unique -%}
+    {{ hostvars[host]['ip'] | default(fallback_ips[host]) }}{{ ' ' if not loop.last else '' }}
+  {%- endfor -%}
+kubelet_secure_addresses: "localhost link-local {{ kube_pods_subnet }} {{ kube_node_addresses }}"
 
 # Reserve this space for kube resources
+# Set to true to reserve resources for kube daemons
+kube_reserved: false
+kube_reserved_cgroups_for_service_slice: kube.slice
+kube_reserved_cgroups: "/{{ kube_reserved_cgroups_for_service_slice }}"
 kube_memory_reserved: 256Mi
 kube_cpu_reserved: 100m
+# kube_ephemeral_storage_reserved: 2Gi
+# kube_pid_reserved: "1000"
 # Reservation for master hosts
 kube_master_memory_reserved: 512Mi
 kube_master_cpu_reserved: 200m
+# kube_master_ephemeral_storage_reserved: 2Gi
+# kube_master_pid_reserved: "1000"
 
 # Set to true to reserve resources for system daemons
 system_reserved: false
+system_reserved_cgroups_for_service_slice: system.slice
+system_reserved_cgroups: "/{{ system_reserved_cgroups_for_service_slice }}"
 system_memory_reserved: 512Mi
 system_cpu_reserved: 500m
+# system_ephemeral_storage_reserved: 2Gi
+# system_pid_reserved: "1000"
 # Reservation for master hosts
 system_master_memory_reserved: 256Mi
 system_master_cpu_reserved: 250m
+# system_master_ephemeral_storage_reserved: 2Gi
+# system_master_pid_reserved: "1000"
+
+## Eviction Thresholds to avoid system OOMs
+# https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/#eviction-thresholds
+eviction_hard: {}
+eviction_hard_control_plane: {}
 
 kubelet_status_update_frequency: 10s
+
+# kube-vip
+kube_vip_version: v0.5.12
+
+kube_vip_arp_enabled: false
+kube_vip_interface:
+kube_vip_services_interface:
+kube_vip_cidr: 32
+kube_vip_controlplane_enabled: false
+kube_vip_ddns_enabled: false
+kube_vip_services_enabled: false
+kube_vip_leader_election_enabled: "{{ kube_vip_arp_enabled }}"
+kube_vip_bgp_enabled: false
+kube_vip_bgp_routerid:
+kube_vip_local_as: 65000
+kube_vip_bgp_peeraddress:
+kube_vip_bgp_peerpass:
+kube_vip_bgp_peeras: 65000
+kube_vip_bgppeers:
+kube_vip_address:
+kube_vip_enableServicesElection: false
+kube_vip_lb_enable: false
+kube_vip_lb_fwdmethod: local
+kube_vip_leaseduration: 5
+kube_vip_renewdeadline: 3
+kube_vip_retryperiod: 1
 
 # Requests for load balancer app
 loadbalancer_apiserver_memory_requests: 32M
 loadbalancer_apiserver_cpu_requests: 25m
 
 loadbalancer_apiserver_keepalive_timeout: 5m
+loadbalancer_apiserver_pod_name: "{% if loadbalancer_apiserver_type == 'nginx' %}nginx-proxy{% else %}haproxy{% endif %}"
 
 # Uncomment if you need to enable deprecated runtimes
 # kube_api_runtime_config:
@@ -53,7 +107,6 @@ loadbalancer_apiserver_keepalive_timeout: 5m
 #   - extensions/v1beta1/deployments=true
 #   - extensions/v1beta1/replicasets=true
 #   - extensions/v1beta1/networkpolicies=true
-#   - extensions/v1beta1/podsecuritypolicies=true
 
 # A port range to reserve for services with NodePort visibility.
 # Inclusive at both ends of the range.
@@ -63,8 +116,17 @@ kube_apiserver_node_port_range: "30000-32767"
 # default is equal to application default
 kubelet_max_pods: 110
 
+# Sets the maximum number of processes running per Pod
+# Default value -1 = unlimited
+kubelet_pod_pids_limit: -1
+
 ## Support parameters to be passed to kubelet via kubelet-config.yaml
 kubelet_config_extra_args: {}
+
+## Parameters to be passed to kubelet via kubelet-config.yaml when cgroupfs is used as cgroup driver
+kubelet_config_extra_args_cgroupfs:
+  systemCgroups: /system.slice
+  cgroupRoot: /
 
 ## Support parameters to be passed to kubelet via kubelet-config.yaml only on nodes, not masters
 kubelet_node_config_extra_args: {}
@@ -83,7 +145,7 @@ kubelet_node_custom_flags: []
 
 # If non-empty, will use this string as identification instead of the actual hostname
 kube_override_hostname: >-
-  {%- if cloud_provider is defined and cloud_provider in [ 'aws' ] -%}
+  {%- if cloud_provider is defined and cloud_provider in ['aws'] -%}
   {%- else -%}
   {{ inventory_hostname }}
   {%- endif -%}
@@ -103,14 +165,14 @@ sysctl_file_path: "/etc/sysctl.d/99-sysctl.conf"
 # For the openstack integration kubelet will need credentials to access
 # openstack apis like nova and cinder. Per default this values will be
 # read from the environment.
-openstack_auth_url: "{{ lookup('env','OS_AUTH_URL')  }}"
-openstack_username: "{{ lookup('env','OS_USERNAME')  }}"
-openstack_password: "{{ lookup('env','OS_PASSWORD')  }}"
-openstack_region: "{{ lookup('env','OS_REGION_NAME')  }}"
-openstack_tenant_id: "{{ lookup('env','OS_TENANT_ID')| default(lookup('env','OS_PROJECT_ID')|default(lookup('env','OS_PROJECT_NAME'),true),true) }}"
-openstack_tenant_name: "{{ lookup('env','OS_TENANT_NAME') }}"
-openstack_domain_name: "{{ lookup('env','OS_USER_DOMAIN_NAME') }}"
-openstack_domain_id: "{{ lookup('env','OS_USER_DOMAIN_ID') }}"
+openstack_auth_url: "{{ lookup('env', 'OS_AUTH_URL') }}"
+openstack_username: "{{ lookup('env', 'OS_USERNAME') }}"
+openstack_password: "{{ lookup('env', 'OS_PASSWORD') }}"
+openstack_region: "{{ lookup('env', 'OS_REGION_NAME') }}"
+openstack_tenant_id: "{{ lookup('env', 'OS_TENANT_ID') | default(lookup('env', 'OS_PROJECT_ID') | default(lookup('env', 'OS_PROJECT_NAME'), true), true) }}"
+openstack_tenant_name: "{{ lookup('env', 'OS_TENANT_NAME') }}"
+openstack_domain_name: "{{ lookup('env', 'OS_USER_DOMAIN_NAME') }}"
+openstack_domain_id: "{{ lookup('env', 'OS_USER_DOMAIN_ID') }}"
 
 # For the vsphere integration, kubelet will need credentials to access
 # vsphere apis
@@ -128,7 +190,7 @@ vsphere_resource_pool: "{{ lookup('env', 'VSPHERE_RESOURCE_POOL') }}"
 
 vsphere_scsi_controller_type: pvscsi
 # vsphere_public_network is name of the network the VMs are joined to
-vsphere_public_network: "{{ lookup('env', 'VSPHERE_PUBLIC_NETWORK')|default('') }}"
+vsphere_public_network: "{{ lookup('env', 'VSPHERE_PUBLIC_NETWORK') | default('') }}"
 
 ## When azure is used, you need to also set the following variables.
 ## see docs/azure.md for details on how to get these values
@@ -165,7 +227,7 @@ azure_cloud: AzurePublicCloud
 #   - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
 #   - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
 #   - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-#   - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+#   - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
 #   - TLS_ECDHE_ECDSA_WITH_RC4_128_SHA
 #   - TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
 #   - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
@@ -173,7 +235,7 @@ azure_cloud: AzurePublicCloud
 #   - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
 #   - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
 #   - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-#   - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+#   - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
 #   - TLS_ECDHE_RSA_WITH_RC4_128_SHA
 #   - TLS_RSA_WITH_3DES_EDE_CBC_SHA
 #   - TLS_RSA_WITH_AES_128_CBC_SHA
@@ -182,3 +244,22 @@ azure_cloud: AzurePublicCloud
 #   - TLS_RSA_WITH_AES_256_CBC_SHA
 #   - TLS_RSA_WITH_AES_256_GCM_SHA384
 #   - TLS_RSA_WITH_RC4_128_SHA
+
+kube_proxy_ipvs_modules:
+  - ip_vs
+  - ip_vs_rr
+  - ip_vs_wrr
+  - ip_vs_sh
+  - ip_vs_wlc
+  - ip_vs_lc
+
+# Kubespray will use the first module of this list which it can successfully modprobe
+conntrack_modules:
+  - nf_conntrack
+  - nf_conntrack_ipv4
+
+
+## Enable distributed tracing for kubelet
+kubelet_tracing: false
+kubelet_tracing_endpoint: 0.0.0.0:4317
+kubelet_tracing_sampling_rate_per_million: 100

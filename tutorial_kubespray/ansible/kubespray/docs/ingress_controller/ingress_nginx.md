@@ -35,7 +35,7 @@ kubectl create clusterrolebinding cluster-admin-binding \
 The following **Mandatory Command** is required for all deployments except for AWS. See below for the AWS version.
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.40.2/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.9.6/deploy/static/provider/cloud/deploy.yaml
 ```
 
 ### Provider Specific Steps
@@ -113,7 +113,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/mast
 
 This example creates an ELB with just two listeners, one in port 80 and another in port 443
 
-![Listeners](https://github.com/kubernetes/ingress-nginx/raw/master/docs/images/elb-l7-listener.png)
+![Listeners](https://github.com/kubernetes/ingress-nginx/blob/main/docs/images/elb-l7-listener.png)
 
 ##### ELB Idle Timeouts
 
@@ -124,7 +124,7 @@ By default NGINX `keepalive_timeout` is set to `75s`.
 The default ELB idle timeout will work for most scenarios, unless the NGINX [keepalive_timeout](http://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout) has been modified,
 in which case `service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout` will need to be modified to ensure it is less than the `keepalive_timeout` the user has configured.
 
-_Please Note: An idle timeout of `3600s` is recommended when using WebSockets._
+*Please Note: An idle timeout of `3600s` is recommended when using WebSockets.*
 
 More information with regards to idle timeouts for your Load Balancer can be found in the [official AWS documentation](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/config-idle-timeout.html).
 
@@ -155,11 +155,11 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/mast
 Using [NodePort](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport):
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/baremetal/service-nodeport.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
 ```
 
 !!! tip
-    For extended notes regarding deployments on bare-metal, see [Bare-metal considerations](./baremetal.md).
+    For extended notes regarding deployments on bare-metal, see [Bare-metal considerations](https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/baremetal.md).
 
 ### Verify installation
 

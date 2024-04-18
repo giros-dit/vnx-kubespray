@@ -163,6 +163,9 @@ spec:
       labels:
         k8s-app: kubernetes-dashboard
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       priorityClassName: system-cluster-critical
       containers:
         - name: kubernetes-dashboard
@@ -208,6 +211,11 @@ spec:
               port: 8443
             initialDelaySeconds: 30
             timeoutSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsUser: 1001
+            runAsGroup: 2001
       volumes:
         - name: kubernetes-dashboard-certs
           secret:
@@ -217,8 +225,6 @@ spec:
       serviceAccountName: kubernetes-dashboard
 {% if dashboard_master_toleration %}
       tolerations:
-        - key: node-role.kubernetes.io/master
-          effect: NoSchedule
         - key: node-role.kubernetes.io/control-plane
           effect: NoSchedule
 {% endif %}
@@ -241,7 +247,7 @@ spec:
     k8s-app: kubernetes-dashboard
 
 ---
-# ------------------- Metrics Scrapper Service Account ------------------- #
+# ------------------- Metrics Scraper Service Account ------------------- #
 
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -257,7 +263,7 @@ rules:
 
 ---
 
-# ------------------- Metrics Scrapper Service  ------------------- #
+# ------------------- Metrics Scraper Service  ------------------- #
 kind: Service
 apiVersion: v1
 metadata:
@@ -274,7 +280,7 @@ spec:
 
 ---
 
-# ------------------- Metrics Scrapper Deployment  ------------------- #
+# ------------------- Metrics Scraper Deployment  ------------------- #
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -293,6 +299,9 @@ spec:
       labels:
         k8s-app: kubernetes-metrics-scraper
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       priorityClassName: system-cluster-critical
       containers:
         - name: kubernetes-metrics-scraper
@@ -307,6 +316,11 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             timeoutSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsUser: 1001
+            runAsGroup: 2001
           volumeMounts:
           - mountPath: /tmp
             name: tmp-volume
@@ -316,8 +330,6 @@ spec:
         emptyDir: {}
 {% if dashboard_master_toleration %}
       tolerations:
-        - key: node-role.kubernetes.io/master
-          effect: NoSchedule
         - key: node-role.kubernetes.io/control-plane
           effect: NoSchedule
 {% endif %}

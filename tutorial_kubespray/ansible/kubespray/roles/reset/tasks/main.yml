@@ -1,20 +1,24 @@
 ---
-- name: reset | stop services
+- name: Reset | stop services
   service:
     name: "{{ item }}"
     state: stopped
   with_items:
-    - kubelet
+    - kubelet.service
+    - cri-dockerd.service
+    - cri-dockerd.socket
   failed_when: false
   tags:
     - services
 
-- name: reset | remove services
+- name: Reset | remove services
   file:
     path: "/etc/systemd/system/{{ item }}"
     state: absent
   with_items:
     - kubelet.service
+    - cri-dockerd.service
+    - cri-dockerd.socket
     - calico-node.service
     - containerd.service.d/http-proxy.conf
     - crio.service.d/http-proxy.conf
@@ -26,45 +30,20 @@
     - containerd
     - crio
 
-- name: reset | remove docker dropins
-  file:
-    path: "/etc/systemd/system/docker.service.d/{{ item }}"
-    state: absent
-  with_items:
-    - docker-dns.conf
-    - docker-options.conf
-    - http-proxy.conf
-    - docker-orphan-cleanup.conf
-  register: docker_dropins_removed
+- name: Reset | Remove Docker
+  include_role:
+    name: container-engine/docker
+    tasks_from: reset
+  when: container_manager == 'docker'
   tags:
     - docker
 
-- name: reset | systemctl daemon-reload  # noqa 503
+- name: Reset | systemctl daemon-reload  # noqa no-handler
   systemd:
     daemon_reload: true
-  when: services_removed.changed or docker_dropins_removed.changed
+  when: services_removed.changed
 
-- name: reset | remove all containers
-  shell: "set -o pipefail && {{ docker_bin_dir }}/docker ps -aq | xargs -r docker rm -fv"
-  args:
-    executable: /bin/bash
-  register: remove_all_containers
-  retries: 4
-  until: remove_all_containers.rc == 0
-  delay: 5
-  when: container_manager == "docker"
-  tags:
-    - docker
-
-- name: reset | restart docker if needed  # noqa 503
-  service:
-    name: docker
-    state: restarted
-  when: docker_dropins_removed.changed and container_manager == "docker"
-  tags:
-    - docker
-
-- name: reset | check if crictl is present
+- name: Reset | check if crictl is present
   stat:
     path: "{{ bin_dir }}/crictl"
     get_attributes: no
@@ -72,8 +51,8 @@
     get_mime: no
   register: crictl
 
-- name: reset | stop all cri containers
-  shell: "set -o pipefail && {{ bin_dir }}/crictl ps -q | xargs -r {{ bin_dir }}/crictl -t 60s stop"
+- name: Reset | stop all cri containers
+  shell: "set -o pipefail && {{ bin_dir }}/crictl ps -q | xargs -r {{ bin_dir }}/crictl -t 60s stop -t {{ cri_stop_containers_grace_period }}"
   args:
     executable: /bin/bash
   register: remove_all_cri_containers
@@ -86,9 +65,10 @@
   when:
     - crictl.stat.exists
     - container_manager in ["crio", "containerd"]
+    - ansible_facts.services['containerd.service'] is defined or ansible_facts.services['cri-o.service'] is defined
   ignore_errors: true  # noqa ignore-errors
 
-- name: reset | force remove all cri containers
+- name: Reset | force remove all cri containers
   command: "{{ bin_dir }}/crictl rm -a -f"
   register: remove_all_cri_containers
   retries: 5
@@ -100,9 +80,11 @@
   when:
     - crictl.stat.exists
     - container_manager in ["crio", "containerd"]
-    - deploy_container_engine|default(true)
+    - deploy_container_engine
+    - ansible_facts.services['containerd.service'] is defined or ansible_facts.services['cri-o.service'] is defined
+  ignore_errors: true  # noqa ignore-errors
 
-- name: reset | stop and disable crio service
+- name: Reset | stop and disable crio service
   service:
     name: crio
     state: stopped
@@ -111,13 +93,13 @@
   tags: [ crio ]
   when: container_manager == "crio"
 
-- name: reset | forcefully wipe CRI-O's container and image storage
+- name: Reset | forcefully wipe CRI-O's container and image storage
   command: "crio wipe -f"
   failed_when: false
   tags: [ crio ]
   when: container_manager == "crio"
 
-- name: reset | stop all cri pods
+- name: Reset | stop all cri pods
   shell: "set -o pipefail && {{ bin_dir }}/crictl pods -q | xargs -r {{ bin_dir }}/crictl -t 60s stopp"
   args:
     executable: /bin/bash
@@ -129,10 +111,12 @@
   when:
     - crictl.stat.exists
     - container_manager == "containerd"
+    - ansible_facts.services['containerd.service'] is defined or ansible_facts.services['cri-o.service'] is defined
   ignore_errors: true  # noqa ignore-errors
 
-- block:
-    - name: reset | force remove all cri pods
+- name: Reset | force remove all cri pods
+  block:
+    - name: Reset | force remove all cri pods
       command: "{{ bin_dir }}/crictl rmp -a -f"
       register: remove_all_cri_containers
       retries: 5
@@ -142,12 +126,15 @@
       when:
         - crictl.stat.exists
         - container_manager == "containerd"
+        - ansible_facts.services['containerd.service'] is defined or ansible_facts.services['cri-o.service'] is defined
 
   rescue:
-    - name: reset | force remove all cri pods (rescue)
+    - name: Reset | force remove all cri pods (rescue)
       shell: "ip netns list | cut -d' ' -f 1 | xargs -n1 ip netns delete && {{ bin_dir }}/crictl rmp -a -f"
+      ignore_errors: true  # noqa ignore-errors
+      changed_when: true
 
-- name: reset | stop etcd services
+- name: Reset | stop etcd services
   service:
     name: "{{ item }}"
     state: stopped
@@ -158,7 +145,7 @@
   tags:
     - services
 
-- name: reset | remove etcd services
+- name: Reset | remove etcd services
   file:
     path: "/etc/systemd/system/{{ item }}.service"
     state: absent
@@ -169,18 +156,37 @@
   tags:
     - services
 
-- name: reset | gather mounted kubelet dirs  # noqa 301
+- name: Reset | remove containerd
+  when: container_manager == 'containerd'
+  block:
+    - name: Reset | stop containerd service
+      service:
+        name: containerd
+        state: stopped
+      failed_when: false
+      tags:
+        - services
+
+    - name: Reset | remove containerd service
+      file:
+        path: /etc/systemd/system/containerd.service
+        state: absent
+      register: services_removed
+      tags:
+        - services
+
+- name: Reset | gather mounted kubelet dirs
   shell: set -o pipefail && mount | grep /var/lib/kubelet/ | awk '{print $3}' | tac
   args:
     executable: /bin/bash
-    warn: false
   check_mode: no
   register: mounted_dirs
   failed_when: false
+  changed_when: false
   tags:
     - mounts
 
-- name: reset | unmount kubelet dirs  # noqa 301
+- name: Reset | unmount kubelet dirs
   command: umount -f {{ item }}
   with_items: "{{ mounted_dirs.stdout_lines }}"
   register: umount_dir
@@ -191,7 +197,7 @@
   tags:
     - mounts
 
-- name: flush iptables
+- name: Flush iptables
   iptables:
     table: "{{ item }}"
     flush: yes
@@ -200,9 +206,23 @@
     - nat
     - mangle
     - raw
-  when: flush_iptables|bool
+  when: flush_iptables | bool
   tags:
     - iptables
+
+- name: Flush ip6tables
+  iptables:
+    table: "{{ item }}"
+    flush: yes
+    ip_version: ipv6
+  with_items:
+    - filter
+    - nat
+    - mangle
+    - raw
+  when: flush_iptables | bool and enable_dual_stack_networks
+  tags:
+    - ip6tables
 
 - name: Clear IPVS virtual server table
   command: "ipvsadm -C"
@@ -210,7 +230,7 @@
   when:
     - kube_proxy_mode == 'ipvs' and inventory_hostname in groups['k8s_cluster']
 
-- name: reset | check kube-ipvs0 network device
+- name: Reset | check kube-ipvs0 network device
   stat:
     path: /sys/class/net/kube-ipvs0
     get_attributes: no
@@ -218,13 +238,13 @@
     get_mime: no
   register: kube_ipvs0
 
-- name: reset | Remove kube-ipvs0
+- name: Reset | Remove kube-ipvs0
   command: "ip link del kube-ipvs0"
   when:
     - kube_proxy_mode == 'ipvs'
     - kube_ipvs0.stat.exists
 
-- name: reset | check nodelocaldns network device
+- name: Reset | check nodelocaldns network device
   stat:
     path: /sys/class/net/nodelocaldns
     get_attributes: no
@@ -232,30 +252,69 @@
     get_mime: no
   register: nodelocaldns_device
 
-- name: reset | Remove nodelocaldns
+- name: Reset | Remove nodelocaldns
   command: "ip link del nodelocaldns"
   when:
-    - enable_nodelocaldns|default(false)|bool
+    - enable_nodelocaldns | default(false) | bool
     - nodelocaldns_device.stat.exists
 
-- name: reset | delete some files and directories
+- name: Reset | Check whether /var/lib/kubelet directory exists
+  stat:
+    path: /var/lib/kubelet
+    get_attributes: no
+    get_checksum: no
+    get_mime: no
+  register: var_lib_kubelet_directory
+
+- name: Reset | Find files/dirs with immutable flag in /var/lib/kubelet
+  command: lsattr -laR /var/lib/kubelet/
+  become: true
+  register: var_lib_kubelet_files_dirs_w_attrs
+  changed_when: false
+  no_log: true
+  when: var_lib_kubelet_directory.stat.exists
+
+- name: Reset | Remove immutable flag from files/dirs in /var/lib/kubelet
+  file:
+    path: "{{ filedir_path }}"
+    state: touch
+    attributes: "-i"
+    mode: 0644
+  loop: "{{ var_lib_kubelet_files_dirs_w_attrs.stdout_lines | select('search', 'Immutable') | list }}"
+  loop_control:
+    loop_var: file_dir_line
+    label: "{{ filedir_path }}"
+  vars:
+    filedir_path: "{{ file_dir_line.split(' ')[0] }}"
+  when: var_lib_kubelet_directory.stat.exists
+
+- name: Reset | delete some files and directories
   file:
     path: "{{ item }}"
     state: absent
   with_items:
     - "{{ kube_config_dir }}"
     - /var/lib/kubelet
+    - "{{ containerd_storage_dir }}"
     - "{{ ansible_env.HOME | default('/root') }}/.kube"
     - "{{ ansible_env.HOME | default('/root') }}/.helm"
+    - "{{ ansible_env.HOME | default('/root') }}/.config/helm"
+    - "{{ ansible_env.HOME | default('/root') }}/.cache/helm"
+    - "{{ ansible_env.HOME | default('/root') }}/.local/share/helm"
     - "{{ etcd_data_dir }}"
     - "{{ etcd_events_data_dir }}"
     - "{{ etcd_config_dir }}"
     - /var/log/calico
+    - /var/log/openvswitch
+    - /var/log/ovn
+    - /var/log/kube-ovn
     - /etc/cni
+    - /etc/nerdctl
     - "{{ nginx_config_dir }}"
     - /etc/dnsmasq.d
     - /etc/dnsmasq.conf
     - /etc/dnsmasq.d-available
+    - /etc/systemd/resolved.conf.d/kubespray.conf
     - /etc/etcd.env
     - /etc/calico
     - /etc/NetworkManager/conf.d/calico.conf
@@ -275,10 +334,12 @@
     - /etc/pki/ca-trust/source/anchors/kube-ca.crt
     - /var/log/pods/
     - "{{ bin_dir }}/kubelet"
+    - "{{ bin_dir }}/cri-dockerd"
     - "{{ bin_dir }}/etcd-scripts"
     - "{{ bin_dir }}/etcd"
     - "{{ bin_dir }}/etcd-events"
     - "{{ bin_dir }}/etcdctl"
+    - "{{ bin_dir }}/etcdctl.sh"
     - "{{ bin_dir }}/kubernetes-scripts"
     - "{{ bin_dir }}/kubectl"
     - "{{ bin_dir }}/kubeadm"
@@ -302,15 +363,41 @@
     - /etc/bash_completion.d/crictl
     - /etc/bash_completion.d/nerdctl
     - /etc/bash_completion.d/krew
-    - "{{ krew_root_dir | default('/usr/local/krew') }}"
+    - /etc/bash_completion.d/krew.sh
+    - "{{ krew_root_dir }}"
     - /etc/modules-load.d/kube_proxy-ipvs.conf
     - /etc/modules-load.d/kubespray-br_netfilter.conf
+    - /etc/modules-load.d/kubespray-kata-containers.conf
     - /usr/libexec/kubernetes
+    - /etc/origin/openvswitch
+    - /etc/origin/ovn
+    - "{{ sysctl_file_path }}"
+    - /etc/crictl.yaml
   ignore_errors: true  # noqa ignore-errors
   tags:
     - files
 
-- name: reset | remove dns settings from dhclient.conf
+- name: Reset | remove containerd binary files
+  file:
+    path: "{{ containerd_bin_dir }}/{{ item }}"
+    state: absent
+  with_items:
+    - containerd
+    - containerd-shim
+    - containerd-shim-runc-v1
+    - containerd-shim-runc-v2
+    - containerd-stress
+    - crictl
+    - critest
+    - ctd-decoder
+    - ctr
+    - runc
+  ignore_errors: true  # noqa ignore-errors
+  when: container_manager == 'containerd'
+  tags:
+    - files
+
+- name: Reset | remove dns settings from dhclient.conf
   blockinfile:
     path: "{{ item }}"
     state: absent
@@ -323,7 +410,7 @@
     - files
     - dns
 
-- name: reset | remove host entries from /etc/hosts
+- name: Reset | remove host entries from /etc/hosts
   blockinfile:
     path: "/etc/hosts"
     state: absent
@@ -332,31 +419,22 @@
     - files
     - dns
 
-- name: reset | include file with reset tasks specific to the network_plugin if exists
-  include_tasks: "{{ (role_path,'../network_plugin',kube_network_plugin,'tasks/reset.yml') | path_join | realpath  }}"
+- name: Reset | include file with reset tasks specific to the network_plugin if exists
+  include_role:
+    name: "network_plugin/{{ kube_network_plugin }}"
+    tasks_from: reset
   when:
     - kube_network_plugin in ['flannel', 'cilium', 'kube-router', 'calico']
   tags:
     - network
 
-- name: reset | Restart network
+- name: Reset | Restart network
   service:
-    name: >-
-      {% if ansible_os_family == "RedHat" -%}
-      {%- if ansible_distribution_major_version|int == 8 or is_fedora_coreos -%}
-      NetworkManager
-      {%- else -%}
-      network
-      {%- endif -%}
-      {%- elif ansible_distribution == "Ubuntu" and ansible_distribution_release in ["bionic", "focal"] -%}
-      systemd-networkd
-      {%- elif ansible_os_family == "Debian" -%}
-      networking
-      {%- endif %}
+    name: "{{ reset_restart_network_service_name }}"
     state: restarted
   when:
-    - ansible_os_family not in ["Flatcar Container Linux by Kinvolk"]
-    - reset_restart_network
+    - ansible_os_family not in ["Flatcar", "Flatcar Container Linux by Kinvolk"]
+    - reset_restart_network | bool
   tags:
     - services
     - network

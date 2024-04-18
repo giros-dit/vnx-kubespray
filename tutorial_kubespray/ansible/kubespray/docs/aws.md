@@ -58,24 +58,36 @@ Guide:
 ```ShellSession
 export AWS_ACCESS_KEY_ID="xxxxx"
 export AWS_SECRET_ACCESS_KEY="yyyyy"
-export REGION="us-east-2"
+export AWS_REGION="us-east-2"
 ```
 
 - We will now create our cluster. There will be either one or two small changes. The first is that we will specify `-i inventory/kubespray-aws-inventory.py` as our inventory script. The other is conditional. If your AWS instances are public facing, you can set the `VPC_VISIBILITY` variable to `public` and that will result in public IP and DNS names being passed into the inventory. This causes your cluster.yml command to look like `VPC_VISIBILITY="public" ansible-playbook ... cluster.yml`
+
+**Optional** Using labels and taints
+
+To add labels to your kubernetes node, add the following tag to your instance:
+
+- Key: `kubespray-node-labels`
+- Value: `node-role.kubernetes.io/ingress=`
+
+To add taints to your kubernetes node, add the following tag to your instance:
+
+- Key: `kubespray-node-taints`
+- Value: `node-role.kubernetes.io/ingress=:NoSchedule`
 
 ## Kubespray configuration
 
 Declare the cloud config variables for the `aws` provider as follows. Setting these variables are optional and depend on your use case.
 
-Variable|Type|Comment
----|---|---
-aws_zone|string|Force set the AWS zone. Recommended to leave blank.
-aws_vpc|string|The AWS VPC flag enables the possibility to run the master components on a different aws account, on a different cloud provider or on-premise. If the flag is set also the KubernetesClusterTag must be provided
-aws_subnet_id|string|SubnetID enables using a specific subnet to use for ELB's
-aws_route_table_id|string|RouteTableID enables using a specific RouteTable
-aws_role_arn|string|RoleARN is the IAM role to assume when interaction with AWS APIs
-aws_kubernetes_cluster_tag|string|KubernetesClusterTag is the legacy cluster id we'll use to identify our cluster resources
-aws_kubernetes_cluster_id|string|KubernetesClusterID is the cluster id we'll use to identify our cluster resources
-aws_disable_security_group_ingress|bool|The aws provider creates an inbound rule per load balancer on the node security group. However, this can run into the AWS security group rule limit of 50 if many LoadBalancers are created. This flag disables the automatic ingress creation. It requires that the user has setup a rule that allows inbound traffic on kubelet ports from the local VPC subnet (so load balancers can access it). E.g. 10.82.0.0/16 30000-32000.
-aws_elb_security_group|string|Only in Kubelet version >= 1.7 : AWS has a hard limit of 500 security groups. For large clusters creating a security group for each ELB can cause the max number of security groups to be reached. If this is set instead of creating a new Security group for each ELB this security group will be used instead.
-aws_disable_strict_zone_check|bool|During the instantiation of an new AWS cloud provider, the detected region is validated against a known set of regions. In a non-standard, AWS like environment (e.g. Eucalyptus), this check may be undesirable.  Setting this to true will disable the check and provide a warning that the check was skipped.  Please note that this is an experimental feature and work-in-progress for the moment.
+| Variable                           | Type   | Comment                                                                                                                                                                                                                                                                                                                                                                                                                             |
+|------------------------------------|--------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| aws_zone                           | string | Force set the AWS zone. Recommended to leave blank.                                                                                                                                                                                                                                                                                                                                                                                 |
+| aws_vpc                            | string | The AWS VPC flag enables the possibility to run the master components on a different aws account, on a different cloud provider or on-premise. If the flag is set also the KubernetesClusterTag must be provided                                                                                                                                                                                                                    |
+| aws_subnet_id                      | string | SubnetID enables using a specific subnet to use for ELB's                                                                                                                                                                                                                                                                                                                                                                           |
+| aws_route_table_id                 | string | RouteTableID enables using a specific RouteTable                                                                                                                                                                                                                                                                                                                                                                                    |
+| aws_role_arn                       | string | RoleARN is the IAM role to assume when interaction with AWS APIs                                                                                                                                                                                                                                                                                                                                                                    |
+| aws_kubernetes_cluster_tag         | string | KubernetesClusterTag is the legacy cluster id we'll use to identify our cluster resources                                                                                                                                                                                                                                                                                                                                           |
+| aws_kubernetes_cluster_id          | string | KubernetesClusterID is the cluster id we'll use to identify our cluster resources                                                                                                                                                                                                                                                                                                                                                   |
+| aws_disable_security_group_ingress | bool   | The aws provider creates an inbound rule per load balancer on the node security group. However, this can run into the AWS security group rule limit of 50 if many LoadBalancers are created. This flag disables the automatic ingress creation. It requires that the user has setup a rule that allows inbound traffic on kubelet ports from the local VPC subnet (so load balancers can access it). E.g. 10.82.0.0/16 30000-32000. |
+| aws_elb_security_group             | string | Only in Kubelet version >= 1.7 : AWS has a hard limit of 500 security groups. For large clusters creating a security group for each ELB can cause the max number of security groups to be reached. If this is set instead of creating a new Security group for each ELB this security group will be used instead.                                                                                                                   |
+| aws_disable_strict_zone_check      | bool   | During the instantiation of an new AWS cloud provider, the detected region is validated against a known set of regions. In a non-standard, AWS like environment (e.g. Eucalyptus), this check may be undesirable.  Setting this to true will disable the check and provide a warning that the check was skipped.  Please note that this is an experimental feature and work-in-progress for the moment.                             |

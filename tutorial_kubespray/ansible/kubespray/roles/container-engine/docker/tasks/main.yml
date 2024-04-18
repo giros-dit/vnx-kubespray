@@ -1,5 +1,5 @@
 ---
-- name: check if fedora coreos
+- name: Check if fedora coreos
   stat:
     path: /run/ostree-booted
     get_attributes: no
@@ -7,22 +7,31 @@
     get_mime: no
   register: ostree
 
-- name: set is_ostree
+- name: Set is_ostree
   set_fact:
     is_ostree: "{{ ostree.stat.exists }}"
 
-- name: gather os specific variables
+- name: Set docker_version for openEuler
+  set_fact:
+    docker_version: '19.03'
+  when: ansible_distribution == "openEuler"
+  tags:
+    - facts
+
+- name: Gather os specific variables
   include_vars: "{{ item }}"
   with_first_found:
     - files:
-        - "{{ ansible_distribution|lower }}-{{ ansible_distribution_version|lower|replace('/', '_') }}.yml"
-        - "{{ ansible_distribution|lower }}-{{ ansible_distribution_release|lower }}-{{ host_architecture }}.yml"
-        - "{{ ansible_distribution|lower }}-{{ ansible_distribution_release|lower }}.yml"
-        - "{{ ansible_distribution|lower }}-{{ ansible_distribution_major_version|lower|replace('/', '_') }}.yml"
-        - "{{ ansible_distribution|lower }}-{{ host_architecture }}.yml"
-        - "{{ ansible_distribution|lower }}.yml"
-        - "{{ ansible_os_family|lower }}-{{ host_architecture }}.yml"
-        - "{{ ansible_os_family|lower }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version | lower | replace('/', '_') }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_release | lower }}-{{ host_architecture }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_release | lower }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version | lower | replace('/', '_') }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ host_architecture }}.yml"
+        - "{{ ansible_distribution | lower }}.yml"
+        - "{{ ansible_distribution.split(' ')[0] | lower }}.yml"
+        - "{{ ansible_os_family | lower }}-{{ ansible_distribution_major_version | lower | replace('/', '_') }}.yml"
+        - "{{ ansible_os_family | lower }}-{{ host_architecture }}.yml"
+        - "{{ ansible_os_family | lower }}.yml"
         - defaults.yml
       paths:
         - ../vars
@@ -35,31 +44,20 @@
     msg: "SUSE distributions always install Docker from the distro repos"
   when: ansible_pkg_mgr == 'zypper'
 
-- include_tasks: set_facts_dns.yml
+- name: Gather DNS facts
+  include_tasks: set_facts_dns.yml
   when: dns_mode != 'none' and resolvconf_mode == 'docker_dns'
   tags:
     - facts
 
-- name: disable unified_cgroup_hierarchy in Fedora 31+
-  command: grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=0"
-  when:
-    - ansible_distribution == "Fedora"
-    - (ansible_distribution_major_version | int) >= 31
-    - ansible_proc_cmdline['systemd.unified_cgroup_hierarchy'] is not defined or ansible_proc_cmdline['systemd.unified_cgroup_hierarchy'] != '0'
+- name: Pre-upgrade docker
+  import_tasks: pre-upgrade.yml
 
-- name: reboot in Fedora 31+
-  reboot:
-  when:
-    - ansible_distribution == "Fedora"
-    - (ansible_distribution_major_version | int) >= 31
-    - ansible_proc_cmdline['systemd.unified_cgroup_hierarchy'] is not defined or ansible_proc_cmdline['systemd.unified_cgroup_hierarchy'] != '0'
-
-- import_tasks: pre-upgrade.yml
-
-- name: ensure docker-ce repository public key is installed
+- name: Ensure docker-ce repository public key is installed
   apt_key:
     id: "{{ item }}"
     url: "{{ docker_repo_key_info.url }}"
+    keyring: "{{ docker_repo_key_keyring|default(omit) }}"
     state: present
   register: keyserver_task_result
   until: keyserver_task_result is succeeded
@@ -69,7 +67,18 @@
   environment: "{{ proxy_env }}"
   when: ansible_pkg_mgr == 'apt'
 
-- name: ensure docker-ce repository is enabled
+# ref to https://github.com/kubernetes-sigs/kubespray/issues/11086
+- name: Remove the archived debian apt repository
+  lineinfile:
+    path: /etc/apt/sources.list
+    regexp: 'buster-backports'
+    state: absent
+    backup: yes
+  when:
+    - ansible_os_family == 'Debian'
+    - ansible_distribution_release == "buster"
+
+- name: Ensure docker-ce repository is enabled
   apt_repository:
     repo: "{{ item }}"
     state: present
@@ -83,7 +92,7 @@
     mode: 0644
   when: ansible_distribution == "Fedora" and not is_ostree
 
-- name: Configure docker repository on RedHat/CentOS/Oracle/AlmaLinux Linux
+- name: Configure docker repository on RedHat/CentOS/OracleLinux/AlmaLinux/KylinLinux
   template:
     src: "rh_docker.repo.j2"
     dest: "{{ yum_repo_dir }}/docker-ce.repo"
@@ -98,13 +107,17 @@
     name: "{{ item }}"
     selection: install
   when: ansible_pkg_mgr == 'apt'
+  register: ret
   changed_when: false
+  failed_when:
+    - ret is failed
+    - ret.msg != ( "Failed to find package '" + item + "' to perform selection 'install'." )
   with_items:
     - "{{ containerd_package }}"
     - docker-ce
     - docker-ce-cli
 
-- name: ensure docker packages are installed
+- name: Ensure docker packages are installed
   package:
     name: "{{ docker_package_info.pkgs }}"
     state: "{{ docker_package_info.state | default('present') }}"
@@ -113,6 +126,7 @@
       update_cache: true
     dnf:
       enablerepo: "{{ docker_package_info.enablerepo | default(omit) }}"
+      disablerepo: "{{ docker_package_info.disablerepo | default(omit) }}"
     yum:
       enablerepo: "{{ docker_package_info.enablerepo | default(omit) }}"
     zypper:
@@ -121,11 +135,11 @@
   until: docker_task_result is succeeded
   retries: 4
   delay: "{{ retry_stagger | d(3) }}"
-  notify: restart docker
+  notify: Restart docker
   when:
-    - not ansible_os_family in ["Flatcar Container Linux by Kinvolk"]
+    - not ansible_os_family in ["Flatcar", "Flatcar Container Linux by Kinvolk"]
     - not is_ostree
-    - docker_package_info.pkgs|length > 0
+    - docker_package_info.pkgs | length > 0
 
 # This is required to ensure any apt upgrade will not break kubernetes
 - name: Tell Debian hosts not to change the docker version with apt upgrade
@@ -139,17 +153,17 @@
     - docker-ce
     - docker-ce-cli
 
-- name: ensure docker started, remove our config if docker start failed and try again
+- name: Ensure docker started, remove our config if docker start failed and try again
   block:
-    - name: ensure service is started if docker packages are already present
+    - name: Ensure service is started if docker packages are already present
       service:
         name: docker
         state: started
       when: docker_task_result is not changed
   rescue:
-    - debug:  # noqa unnamed-task
+    - debug:  # noqa name[missing]
         msg: "Docker start failed. Try to remove our config"
-    - name: remove kubespray generated config
+    - name: Remove kubespray generated config
       file:
         path: "{{ item }}"
         state: absent
@@ -158,13 +172,14 @@
         - /etc/systemd/system/docker.service.d/docker-options.conf
         - /etc/systemd/system/docker.service.d/docker-dns.conf
         - /etc/systemd/system/docker.service.d/docker-orphan-cleanup.conf
-      notify: restart docker
+      notify: Restart docker
 
-- name: flush handlers so we can wait for docker to come up
+- name: Flush handlers so we can wait for docker to come up
   meta: flush_handlers
 
 # Install each plugin using a looped include to make error handling in the included task simpler.
-- include_tasks: docker_plugin.yml
+- name: Install docker plugin
+  include_tasks: docker_plugin.yml
   loop: "{{ docker_plugins }}"
   loop_control:
     loop_var: docker_plugin
@@ -172,7 +187,7 @@
 - name: Set docker systemd config
   import_tasks: systemd.yml
 
-- name: ensure docker service is started and enabled
+- name: Ensure docker service is started and enabled
   service:
     name: "{{ item }}"
     enabled: yes

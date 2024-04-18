@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SCENARIO=k8s_lab.xml
-VERS='01'
+SCENARIO=tutorial_kubespray.xml
+VERS='02'
 
 # Move to the upper directory where this script is
 cdir=$( dirname $0 )
@@ -10,6 +10,6 @@ cd $cdir/..
 vnx --pack $SCENARIO \
     --pack-version $VERS \
     --pack-add-files \
-        00-readme-k8s_lab.txt ansible/kubespray/requirements.txt \
+        ansible conf examples openstack_lab-vms-vlan.xml bin \
     $1 $2 $3
 

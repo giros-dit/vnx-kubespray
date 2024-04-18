@@ -1,13 +1,4 @@
 ---
-- name: Make sure dynamic kubelet configuration directory is writeable
-  file:
-    path: "{{ dynamic_kubelet_configuration_dir }}"
-    mode: 0600
-    state: directory
-  when:
-    - dynamic_kubelet_configuration
-    - kube_version is version('v1.22.0', '<')
-
 - name: Set kubelet api version to v1beta1
   set_fact:
     kubeletConfig_api_version: v1beta1
@@ -21,7 +12,7 @@
     dest: "{{ kube_config_dir }}/kubelet.env"
     setype: "{{ (preinstall_selinux_state != 'disabled') | ternary('etc_t', omit) }}"
     backup: yes
-    mode: 0640
+    mode: 0600
   notify: Node | restart kubelet
   tags:
     - kubelet
@@ -31,7 +22,7 @@
   template:
     src: "kubelet-config.{{ kubeletConfig_api_version }}.yaml.j2"
     dest: "{{ kube_config_dir }}/kubelet-config.yaml"
-    mode: 0640
+    mode: 0600
   notify: Kubelet | restart kubelet
   tags:
     - kubelet
@@ -42,13 +33,16 @@
     src: "kubelet.service.j2"
     dest: "/etc/systemd/system/kubelet.service"
     backup: "yes"
-    mode: 0644
+    mode: 0600
+    validate: "sh -c '[ -f /usr/bin/systemd/system/factory-reset.target ] || exit 0 && systemd-analyze verify %s:kubelet.service'"
+    # FIXME: check that systemd version >= 250 (factory-reset.target was introduced in that release)
+    # Remove once we drop support for systemd < 250
   notify: Node | restart kubelet
   tags:
     - kubelet
     - kubeadm
 
-- name: flush_handlers and reload-systemd
+- name: Flush_handlers and reload-systemd
   meta: flush_handlers
 
 - name: Enable kubelet
