@@ -123,6 +123,7 @@ registry-proxy-whlbp                 1/1     Running   0          43m
 ```
 
 > *Note*: The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
+> 
   
 ### Kubectl usage
 
