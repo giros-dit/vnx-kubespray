@@ -4,7 +4,7 @@ VNX scenario that deploys a production-ready three-node Kubernetes cluster using
 
 ![kubespray](tutorial_kubespray/docs/kubespray-logo.png)
 
-For this version of the scenario [Flannel CNI](https://github.com/flannel-io/flannel) network plugin is used.
+For this version of the scenario [Calico CNI](https://github.com/projectcalico/calico) network plugin is used.
 
 ## Scenario topology
 
@@ -86,40 +86,37 @@ This is how Ansible would access the nodes in the scenario.
 ## Checking cluster operation
 - Cluster node availability:
 ```bash
-kubectl get nodes
-NAME          STATUS   ROLES           AGE   VERSION
-k8s-master    Ready    control-plane   15m   v1.26.1
-k8s-worker1   Ready    <none>          13m   v1.26.1
-k8s-worker2   Ready    <none>          13m   v1.26.1
+NAME          STATUS   ROLES                  AGE     VERSION
+k8s-master    Ready    control-plane,master   2m56s   v1.21.5
+k8s-worker1   Ready    <none>                 2m1s    v1.21.5
+k8s-worker2   Ready    <none>                 2m1s    v1.21.5
 ```
 
 - Kubernetes system pods status:
 ```bash
-kubectl get pods -n kube-system
-NAME                                 READY   STATUS    RESTARTS   AGE
-coredns-8474476ff8-bgbsk             1/1     Running   0          43m
-coredns-8474476ff8-hg7fh             1/1     Running   0          43m
-dns-autoscaler-7df78bfcfb-zchrw      1/1     Running   0          43m
-kube-apiserver-k8s-master            1/1     Running   0          45m
-kube-controller-manager-k8s-master   1/1     Running   0          45m
-kube-flannel-c2f8h                   1/1     Running   0          44m
-kube-flannel-nzbfw                   1/1     Running   0          44m
-kube-flannel-pwzrd                   1/1     Running   0          44m
-kube-multus-ds-amd64-6nqmf           1/1     Running   0          44m
-kube-multus-ds-amd64-8bqbm           1/1     Running   0          44m
-kube-multus-ds-amd64-qh5gb           1/1     Running   0          44m
-kube-proxy-7d688                     1/1     Running   0          44m
-kube-proxy-fvb2c                     1/1     Running   0          44m
-kube-proxy-wslw8                     1/1     Running   0          44m
-kube-scheduler-k8s-master            1/1     Running   0          45m
-nginx-proxy-k8s-worker1              1/1     Running   0          44m
-nginx-proxy-k8s-worker2              1/1     Running   0          44m
-nodelocaldns-b5nkp                   1/1     Running   0          43m
-nodelocaldns-htsjr                   1/1     Running   0          43m
-nodelocaldns-tx97n                   1/1     Running   0          43m
-registry-n4jfj                       1/1     Running   0          43m
-registry-proxy-dw2jq                 1/1     Running   0          43m
-registry-proxy-whlbp                 1/1     Running   0          43m
+root@k8s-master:~# kubectl get pods -n kube-system
+NAME                                       READY   STATUS    RESTARTS   AGE
+calico-kube-controllers-8575b76f66-j8hbl   1/1     Running   0          107s
+calico-node-dqsd5                          1/1     Running   0          119s
+calico-node-rq7n9                          1/1     Running   0          119s
+calico-node-wtv8m                          1/1     Running   0          119s
+coredns-8474476ff8-hd88j                   1/1     Running   0          90s
+coredns-8474476ff8-n9v98                   1/1     Running   0          85s
+dns-autoscaler-7df78bfcfb-r7r4z            1/1     Running   0          87s
+kube-apiserver-k8s-master                  1/1     Running   0          2m57s
+kube-controller-manager-k8s-master         1/1     Running   0          2m57s
+kube-proxy-89vv4                           1/1     Running   0          2m10s
+kube-proxy-bl95v                           1/1     Running   0          2m10s
+kube-proxy-p6ws4                           1/1     Running   0          2m10s
+kube-scheduler-k8s-master                  1/1     Running   0          2m57s
+nginx-proxy-k8s-worker1                    1/1     Running   0          2m11s
+nginx-proxy-k8s-worker2                    1/1     Running   0          2m11s
+nodelocaldns-5zqdt                         1/1     Running   0          87s
+nodelocaldns-6dhzx                         1/1     Running   0          87s
+nodelocaldns-7f5gn                         1/1     Running   0          87s
+registry-pnpsb                             1/1     Running   0          77s
+registry-proxy-zkbgx                       1/1     Running   0          76s
+registry-proxy-zrdqq                       1/1     Running   0          76s
 ```
 
 > *Note*: The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
@@ -144,6 +141,11 @@ server: https://k8s-master:6443
 ### Helm client
 
 Helm client is installed in the `k8s-master` node.
+
+## Network Management
+
+> *TO-DO*: We  use Calico as k8s network plugin. BGP peering is configured from each k8s node to router r1, who runs BIRD daemon providing BGP route reflector_functions to the k8s cluster. By using Calicos BGP feature, our router r1 can dynamically learn pod and service IPs from Kubernetes. As a result, external hosts such as h1 can easily access k8s services without having to manage routing in the network.
+> 
 
 ## Cleanup
 
