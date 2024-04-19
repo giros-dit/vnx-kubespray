@@ -22,9 +22,9 @@
     - ntp
   when: ansible_os_family == "Debian"
 
-- name: Create deployment user if required
-  include_tasks: user.yml
+# Create deployment user if required
+- include: user.yml
   when: k8s_deployment_user is defined
 
-- name: Set proper sysctl values
-  import_tasks: sysctl.yml
+# Set proper sysctl values
+- include: sysctl.yml

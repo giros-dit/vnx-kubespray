@@ -40,8 +40,6 @@ variable "gfs_volume_size_in_gb" {}
 
 variable "master_volume_type" {}
 
-variable "node_volume_type" {}
-
 variable "public_key_path" {}
 
 variable "image" {}
@@ -68,14 +66,6 @@ variable "network_id" {
   default = ""
 }
 
-variable "use_existing_network" {
-  type = bool
-}
-
-variable "network_router_id" {
-  default = ""
-}
-
 variable "k8s_master_fips" {
   type = list
 }
@@ -86,10 +76,6 @@ variable "k8s_master_no_etcd_fips" {
 
 variable "k8s_node_fips" {
   type = list
-}
-
-variable "k8s_masters_fips" {
-  type = map
 }
 
 variable "k8s_nodes_fips" {
@@ -104,15 +90,7 @@ variable "bastion_allowed_remote_ips" {
   type = list
 }
 
-variable "bastion_allowed_remote_ipv6_ips" {
-  type = list
-}
-
 variable "master_allowed_remote_ips" {
-  type = list
-}
-
-variable "master_allowed_remote_ipv6_ips" {
   type = list
 }
 
@@ -120,61 +98,13 @@ variable "k8s_allowed_remote_ips" {
   type = list
 }
 
-variable "k8s_allowed_remote_ips_ipv6" {
-  type = list
-}
-
 variable "k8s_allowed_egress_ips" {
   type = list
 }
 
-variable "k8s_allowed_egress_ipv6_ips" {
-  type = list
-}
+variable "k8s_nodes" {}
 
-variable "k8s_masters" {
-  type = map(object({
-    az                     = string
-    flavor                 = string
-    floating_ip            = bool
-    etcd                   = bool
-    image_id               = optional(string)
-    root_volume_size_in_gb = optional(number)
-    volume_type            = optional(string)
-    network_id             = optional(string)
-  }))
-}
-
-variable "k8s_nodes" {
-  type = map(object({
-    az                     = string
-    flavor                 = string
-    floating_ip            = bool
-    extra_groups           = optional(string)
-    image_id               = optional(string)
-    root_volume_size_in_gb = optional(number)
-    volume_type            = optional(string)
-    network_id             = optional(string)
-    additional_server_groups = optional(list(string))
-    server_group           = optional(string)
-    cloudinit              = optional(object({
-      extra_partitions = optional(list(object({
-        volume_path     = string
-        partition_path  = string
-        partition_start = string
-        partition_end   = string
-        mount_path      = string
-      })), [])
-      netplan_critical_dhcp_interface = optional(string, "")
-    }))
-  }))
-}
-
-variable "additional_server_groups" {
-  type = map(object({
-    policy = string
-  }))
-}
+variable "wait_for_floatingip" {}
 
 variable "supplementary_master_groups" {
   default = ""
@@ -188,38 +118,14 @@ variable "master_allowed_ports" {
   type = list
 }
 
-variable "master_allowed_ports_ipv6" {
-  type = list
-}
-
 variable "worker_allowed_ports" {
-  type = list
-}
-
-variable "worker_allowed_ports_ipv6" {
-  type = list
-}
-
-variable "bastion_allowed_ports" {
-  type = list
-}
-
-variable "bastion_allowed_ports_ipv6" {
   type = list
 }
 
 variable "use_access_ip" {}
 
-variable "master_server_group_policy" {
-  type = string
-}
-
-variable "node_server_group_policy" {
-  type = string
-}
-
-variable "etcd_server_group_policy" {
-  type = string
+variable "use_server_groups" {
+  type = bool
 }
 
 variable "extra_sec_groups" {
@@ -247,17 +153,5 @@ variable "image_master_uuid" {
 }
 
 variable "group_vars_path" {
-  type = string
-}
-
-variable "port_security_enabled" {
-  type = bool
-}
-
-variable "force_null_port_security" {
-  type = bool
-}
-
-variable "private_subnet_id" {
   type = string
 }

@@ -5,8 +5,7 @@ variable "machines" {
   description = "Cluster machines"
   type = map(object({
     node_type = string
-    ip        = string
-    netmask   = string
+    ip      = string
   }))
 }
 
@@ -18,13 +17,9 @@ variable "datastore_id" {}
 variable "guest_id" {}
 variable "scsi_type" {}
 variable "network_id" {}
-variable "interface_name" {}
 variable "adapter_type" {}
 variable "disk_thin_provisioned" {}
 variable "template_id" {}
-variable "vapp" {
-  type = bool
-}
 variable "firmware" {}
 variable "folder" {}
 variable "ssh_public_keys" {

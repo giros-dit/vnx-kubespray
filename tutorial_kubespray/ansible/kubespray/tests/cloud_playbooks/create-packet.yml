@@ -1,7 +1,6 @@
 ---
 
-- name: Provision Packet VMs
-  hosts: localhost
+- hosts: localhost
   gather_facts: no
   become: true
   vars:

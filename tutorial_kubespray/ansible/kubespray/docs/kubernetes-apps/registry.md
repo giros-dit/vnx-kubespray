@@ -29,7 +29,8 @@ use Kubernetes's `PersistentVolume` abstraction. The following template is
 expanded by `salt` in the GCE cluster turnup, but can easily be adapted to
 other situations:
 
-```yaml
+<!-- BEGIN MUNGE: EXAMPLE registry-pv.yaml.in -->
+``` yaml
 kind: PersistentVolume
 apiVersion: v1
 metadata:
@@ -45,6 +46,7 @@ spec:
     fsType: "ext4"
 {% endif %}
 ```
+<!-- END MUNGE: EXAMPLE registry-pv.yaml.in -->
 
 If, for example, you wanted to use NFS you would just need to change the
 `gcePersistentDisk` block to `nfs`. See
@@ -66,7 +68,8 @@ Now that the Kubernetes cluster knows that some storage exists, you can put a
 claim on that storage. As with the `PersistentVolume` above, you can start
 with the `salt` template:
 
-```yaml
+<!-- BEGIN MUNGE: EXAMPLE registry-pvc.yaml.in -->
+``` yaml
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -79,6 +82,7 @@ spec:
     requests:
       storage: {{ pillar['cluster_registry_disk_size'] }}
 ```
+<!-- END MUNGE: EXAMPLE registry-pvc.yaml.in -->
 
 This tells Kubernetes that you want to use storage, and the `PersistentVolume`
 you created before will be bound to this claim (unless you have other
@@ -89,7 +93,8 @@ gives you the right to use this storage until you release the claim.
 
 Now we can run a Docker registry:
 
-```yaml
+<!-- BEGIN MUNGE: EXAMPLE registry-rc.yaml -->
+``` yaml
 apiVersion: v1
 kind: ReplicationController
 metadata:
@@ -133,14 +138,14 @@ spec:
         persistentVolumeClaim:
           claimName: kube-registry-pvc
 ```
-
-*Note:* that if you have set multiple replicas, make sure your CSI driver has support for the `ReadWriteMany` accessMode.
+<!-- END MUNGE: EXAMPLE registry-rc.yaml -->
 
 ## Expose the registry in the cluster
 
 Now that we have a registry `Pod` running, we can expose it as a Service:
 
-```yaml
+<!-- BEGIN MUNGE: EXAMPLE registry-svc.yaml -->
+``` yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -157,6 +162,7 @@ spec:
     port: 5000
     protocol: TCP
 ```
+<!-- END MUNGE: EXAMPLE registry-svc.yaml -->
 
 ## Expose the registry on each node
 
@@ -164,7 +170,8 @@ Now that we have a running `Service`, we need to expose it onto each Kubernetes
 `Node` so that Docker will see it as `localhost`. We can load a `Pod` on every
 node by creating following daemonset.
 
-```yaml
+<!-- BEGIN MUNGE: EXAMPLE ../../saltbase/salt/kube-registry-proxy/kube-registry-proxy.yaml -->
+``` yaml
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -198,6 +205,7 @@ spec:
           containerPort: 80
           hostPort: 5000
 ```
+<!-- END MUNGE: EXAMPLE ../../saltbase/salt/kube-registry-proxy/kube-registry-proxy.yaml -->
 
 When modifying replication-controller, service and daemon-set definitions, take
 care to ensure *unique* identifiers for the rc-svc couple and the daemon-set.
@@ -209,7 +217,7 @@ This ensures that port 5000 on each node is directed to the registry `Service`.
 You should be able to verify that it is running by hitting port 5000 with a web
 browser and getting a 404 error:
 
-```ShellSession
+``` console
 $ curl localhost:5000
 404 page not found
 ```
@@ -219,7 +227,7 @@ $ curl localhost:5000
 To use an image hosted by this registry, simply say this in your `Pod`'s
 `spec.containers[].image` field:
 
-```yaml
+``` yaml
     image: localhost:5000/user/container
 ```
 
@@ -231,7 +239,7 @@ building locally and want to push to your cluster.
 You can use `kubectl` to set up a port-forward from your local node to a
 running Pod:
 
-```ShellSession
+``` console
 $ POD=$(kubectl get pods --namespace kube-system -l k8s-app=registry \
             -o template --template '{{range .items}}{{.metadata.name}} {{.status.phase}}{{"\n"}}{{end}}' \
             | grep Running | head -1 | cut -f1 -d' ')

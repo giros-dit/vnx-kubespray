@@ -47,10 +47,6 @@ If you need to delete all resources from a resource group, simply call:
 
 **WARNING** this really deletes everything from your resource group, including everything that was later created by you!
 
-## Installing Ansible and the dependencies
-
-Install Ansible according to [Ansible installation guide](/docs/ansible.md#installing-ansible)
-
 ## Generating an inventory for kubespray
 
 After you have applied the templates, you can generate an inventory with this call:
@@ -63,5 +59,6 @@ It will create the file ./inventory which can then be used with kubespray, e.g.:
 
 ```shell
 cd kubespray-root-dir
+sudo pip3 install -r requirements.txt
 ansible-playbook -i contrib/azurerm/inventory -u devops --become -e "@inventory/sample/group_vars/all/all.yml" cluster.yml
 ```

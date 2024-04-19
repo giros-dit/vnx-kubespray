@@ -50,7 +50,7 @@ calico_datastore: kdd
 
 ### Optional : Define network backend
 
-In some cases you may want to define Calico network backend. Allowed values are `bird`, `vxlan` or `none`. `vxlan` is the default value.
+In some cases you may want to define Calico network backend. Allowed values are `bird`, `vxlan` or `none`. Bird is a default value.
 
 To re-define you need to edit the inventory and add a group variable `calico_network_backend`
 
@@ -72,14 +72,9 @@ calico_pool_cidr_ipv6: fd85:ee78:d8a6:8607::1:0000/112
 
 In some cases you may want to route the pods subnet and so NAT is not needed on the nodes.
 For instance if you have a cluster spread on different locations and you want your pods to talk each other no matter where they are located.
-The following variables need to be set as follow:
-
-```yml
-peer_with_router: true  # enable the peering with the datacenter's border router (default value: false).
-nat_outgoing: false  # (optional) NAT outgoing (default value: true).
-```
-
-And you'll need to edit the inventory and add a hostvar `local_as` by node.
+The following variables need to be set:
+`peer_with_router` to enable the peering with the datacenter's border router (default value: false).
+you'll need to edit the inventory and add a hostvar `local_as` by node.
 
 ```ShellSession
 node1 ansible_ssh_host=95.54.0.12 local_as=xxxxxx
@@ -129,7 +124,8 @@ You need to edit your inventory and add:
 * `calico_rr` group with nodes in it. `calico_rr` can be combined with
   `kube_node` and/or `kube_control_plane`. `calico_rr` group also must be a child
    group of `k8s_cluster` group.
-* `cluster_id` by route reflector node/group (see details [here](https://hub.docker.com/r/calico/routereflector/))
+* `cluster_id` by route reflector node/group (see details
+[here](https://hub.docker.com/r/calico/routereflector/))
 
 Here's an example of Kubespray inventory with standalone route reflectors:
 
@@ -176,8 +172,6 @@ node5
 
 [rack0:vars]
 cluster_id="1.0.0.1"
-calico_rr_id=rr1
-calico_group_id=rr1
 ```
 
 The inventory above will deploy the following topology assuming that calico's
@@ -187,7 +181,7 @@ The inventory above will deploy the following topology assuming that calico's
 
 ### Optional : Define default endpoint to host action
 
-By default Calico blocks traffic from endpoints to the host itself by using an iptables DROP action. When using it in kubernetes the action has to be changed to RETURN (default in kubespray) or ACCEPT (see <https://docs.tigera.io/calico/latest/network-policy/hosts/protect-hosts#control-default-behavior-of-workload-endpoint-to-host-traffic> ) Otherwise all network packets from pods (with hostNetwork=False) to services endpoints (with hostNetwork=True) within the same node are dropped.
+By default Calico blocks traffic from endpoints to the host itself by using an iptables DROP action. When using it in kubernetes the action has to be changed to RETURN (default in kubespray) or ACCEPT (see <https://github.com/projectcalico/felix/issues/660> and <https://github.com/projectcalico/calicoctl/issues/1389).> Otherwise all network packets from pods (with hostNetwork=False) to services endpoints (with hostNetwork=True) within the same node are dropped.
 
 To re-define default action please set the following variable in your inventory:
 
@@ -195,7 +189,7 @@ To re-define default action please set the following variable in your inventory:
 calico_endpoint_to_host_action: "ACCEPT"
 ```
 
-### Optional : Define address on which Felix will respond to health requests
+## Optional : Define address on which Felix will respond to health requests
 
 Since Calico 3.2.0, HealthCheck default behavior changed from listening on all interfaces to just listening on localhost.
 
@@ -205,84 +199,25 @@ To re-define health host please set the following variable in your inventory:
 calico_healthhost: "0.0.0.0"
 ```
 
-### Optional : Configure VXLAN hardware Offload
-
-The VXLAN Offload is disable by default. It can be configured like this to enabled it:
-
-```yml
-calico_feature_detect_override: "ChecksumOffloadBroken=false" # The vxlan offload will enabled (It may cause problem on buggy NIC driver)
-```
-
-### Optional : Configure Calico Node probe timeouts
-
-Under certain conditions a deployer may need to tune the Calico liveness and readiness probes timeout settings. These can be configured like this:
-
-```yml
-calico_node_livenessprobe_timeout: 10
-calico_node_readinessprobe_timeout: 10
-```
-
-### Optional :  Enable NAT with IPv6
-
-To allow outgoing IPv6 traffic going from pods to the Internet, enable the following:
-
-```yml
-nat_outgoing_ipv6: true  # NAT outgoing ipv6 (default value: false).
-```
-
 ## Config encapsulation for cross server traffic
 
-Calico supports two types of encapsulation: [VXLAN and IP in IP](https://docs.projectcalico.org/v3.11/networking/vxlan-ipip). VXLAN is the more mature implementation and enabled by default, please check your environment if you need *IP in IP* encapsulation.
+Calico supports two types of encapsulation: [VXLAN and IP in IP](https://docs.projectcalico.org/v3.11/networking/vxlan-ipip). VXLAN is supported in some environments where IP in IP is not (for example, Azure).
 
-*IP in IP* and *VXLAN* is mutually exclusive modes.
+*IP in IP* and *VXLAN* is mutualy exclusive modes.
 
-Kubespray defaults have changed after version 2.18 from auto-enabling `ipip` mode to auto-enabling `vxlan`. This was done to facilitate wider deployment scenarios including those where vxlan acceleration is provided by the underlying network devices.
-
-If you are running your cluster with the default calico settings and are upgrading to a release post 2.18.x (i.e. 2.19 and later or `master` branch) then you have two options:
-
-* perform a manual migration to vxlan before upgrading kubespray (see migrating from IP in IP to VXLAN below)
-* pin the pre-2.19 settings in your ansible inventory (see IP in IP mode settings below)
-
-**Note:**: Vxlan in ipv6 only supported when kernel >= 3.12. So if your kernel version < 3.12, Please don't set `calico_vxlan_mode_ipv6: Always`. More details see [#Issue 6877](https://github.com/projectcalico/calico/issues/6877).
-
-### IP in IP mode
-
-To configure Ip in Ip mode you need to use the bird network backend.
+Configure Ip in Ip mode. Possible values is `Always`, `CrossSubnet`, `Never`.
 
 ```yml
-calico_ipip_mode: 'Always'  # Possible values is `Always`, `CrossSubnet`, `Never`
-calico_vxlan_mode: 'Never'
-calico_network_backend: 'bird'
+calico_ipip_mode: 'Always'
 ```
 
-### BGP mode
-
-To enable BGP no-encapsulation mode:
+Configure VXLAN mode. Possible values is `Always`, `CrossSubnet`, `Never`.
 
 ```yml
-calico_ipip_mode: 'Never'
 calico_vxlan_mode: 'Never'
-calico_network_backend: 'bird'
 ```
 
-### Migrating from IP in IP to VXLAN
-
-If you would like to migrate from the old IP in IP with `bird` network backends default to the new VXLAN based encapsulation you need to perform this change before running an upgrade of your cluster; the `cluster.yml` and `upgrade-cluster.yml` playbooks will refuse to continue if they detect incompatible settings.
-
-Execute the following steps on one of the control plane nodes, ensure the cluster in healthy before proceeding.
-
-```shell
-calicoctl.sh patch felixconfig default -p '{"spec":{"vxlanEnabled":true}}'
-calicoctl.sh patch ippool default-pool -p '{"spec":{"ipipMode":"Never", "vxlanMode":"Always"}}'
-```
-
-**Note:** if you created multiple ippools you will need to patch all of them individually to change their encapsulation. The kubespray playbooks only handle the default ippool created by kubespray.
-
-Wait for the `vxlan.calico` interfaces to be created on all cluster nodes and traffic to be routed through it then you can disable `ipip`.
-
-```shell
-calicoctl.sh patch felixconfig default -p '{"spec":{"ipipEnabled":false}}'
-```
+If you use VXLAN mode, BGP networking is not required. You can disable BGP to reduce the moving parts in your cluster by `calico_network_backend: vxlan`
 
 ## Configuring interface MTU
 
@@ -339,13 +274,6 @@ calico_ipam_host_local: true
 
 Refer to Project Calico section [Using host-local IPAM](https://docs.projectcalico.org/reference/cni-plugin/configuration#using-host-local-ipam) for further information.
 
-### Optional : Disable CNI logging to disk
-
-Calico CNI plugin logs to /var/log/calico/cni/cni.log and to stderr.
-stderr of CNI plugins can be found in the logs of container runtime.
-
-You can disable Calico CNI logging to disk by setting `calico_cni_log_file_path: false`.
-
 ## eBPF Support
 
 Calico supports eBPF for its data plane see [an introduction to the Calico eBPF Dataplane](https://www.projectcalico.org/introducing-the-calico-ebpf-dataplane/) for further information.
@@ -358,9 +286,8 @@ To enable the eBPF dataplane support ensure you add the following to your invent
 
 ```yaml
 calico_bpf_enabled: true
+kube_proxy_remove: true
 ```
-
-**NOTE:** there is known incompatibility in using the `kernel-kvm` kernel package on Ubuntu OSes because it is missing support for `CONFIG_NET_SCHED` which is a requirement for Calico eBPF support. When using Calico eBPF with Ubuntu ensure you run the `-generic` kernel.
 
 ### Cleaning up after kube-proxy
 
@@ -382,13 +309,18 @@ To clean up any ipvs leftovers:
 
 Calico node, typha and kube-controllers need to be able to talk to the kubernetes API. Please reference the [Enabling eBPF Calico Docs](https://docs.projectcalico.org/maintenance/ebpf/enabling-bpf) for guidelines on how to do this.
 
-Kubespray sets up the `kubernetes-services-endpoint` configmap based on the contents of the `loadbalancer_apiserver` inventory variable documented in [HA Mode](/docs/ha-mode.md).
+Kubespray sets up the `kubernetes-services-endpoint` configmap based on the contents of the `loadbalancer_apiserver` inventory variable documented in [HA Mode](./ha-mode.md).
 
-If no external loadbalancer is used, Calico eBPF can also use the localhost loadbalancer option. We are able to do so only if you use the same port for the localhost apiserver loadbalancer and the kube-apiserver. In this case Calico Automatic Host Endpoints need to be enabled to allow services like `coredns` and `metrics-server` to communicate with the kubernetes host endpoint. See [this blog post](https://www.projectcalico.org/securing-kubernetes-nodes-with-calico-automatic-host-endpoints/) on enabling automatic host endpoints.
+If no external loadbalancer is used, Calico eBPF can also use the localhost loadbalancer option. In this case Calico Automatic Host Endpoints need to be enabled to allow services like `coredns` and `metrics-server` to communicate with the kubernetes host endpoint. See [this blog post](https://www.projectcalico.org/securing-kubernetes-nodes-with-calico-automatic-host-endpoints/) on enabling automatic host endpoints.
+
+```yaml
+loadbalancer_apiserver_localhost: true
+use_localhost_as_kubeapi_loadbalancer: true
+```
 
 ### Tunneled versus Direct Server Return
 
-By default Calico uses Tunneled service mode but it can use direct server return (DSR) in order to optimize the return path for a service.
+By default Calico usese Tunneled service mode but it can use direct server return (DSR) in order to optimize the return path for a service.
 
 To configure DSR:
 
@@ -414,7 +346,7 @@ Please see [Calico eBPF troubleshooting guide](https://docs.projectcalico.org/ma
 
 ## Wireguard Encryption
 
-Calico supports using Wireguard for encryption. Please see the docs on [encrypt cluster pod traffic](https://docs.projectcalico.org/security/encrypt-cluster-pod-traffic).
+Calico supports using Wireguard for encryption. Please see the docs on [encryptiong cluster pod traffic](https://docs.projectcalico.org/security/encrypt-cluster-pod-traffic).
 
 To enable wireguard support:
 
@@ -426,7 +358,6 @@ The following OSes will require enabling the EPEL repo in order to bring in wire
 
 * CentOS 7 & 8
 * AlmaLinux 8
-* Rocky Linux 8
 * Amazon Linux 2
 
 ```yaml
