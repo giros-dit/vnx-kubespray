@@ -123,7 +123,7 @@ weave-net-k7swf                      2/2     Running   0          3m12s
 weave-net-vv2c9                      2/2     Running   1          3m12s
 ```
 
-> **NOTE:** : The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
+> **NOTE:** The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
   
 ### Kubectl usage
 
