@@ -1,11 +1,9 @@
 ---
-- name: Prepare heketi install
-  hosts: heketi-node
+- hosts: heketi-node
   roles:
     - { role: prepare }
 
-- name: Provision heketi
-  hosts: kube_control_plane[0]
+- hosts: kube_control_plane[0]
   tags:
     - "provision"
   roles:

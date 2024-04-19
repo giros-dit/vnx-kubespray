@@ -1,11 +1,9 @@
 ---
-- name: Create nodes as docker containers
-  hosts: localhost
+- hosts: localhost
   gather_facts: False
   roles:
     - { role: dind-host }
 
-- name: Customize each node containers
-  hosts: containers
+- hosts: containers
   roles:
     - { role: dind-cluster }

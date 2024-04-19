@@ -73,8 +73,8 @@
                             "privileged": true
                         },
                         "readinessProbe": {
-                            "timeoutSeconds": {{ glusterfs_daemonset.readiness_probe.timeout_seconds }},
-                            "initialDelaySeconds": {{ glusterfs_daemonset.readiness_probe.initial_delay_seconds }},
+                            "timeoutSeconds": 3,
+                            "initialDelaySeconds": 3,
                             "exec": {
                                 "command": [
                                     "/bin/bash",
@@ -84,8 +84,8 @@
                             }
                         },
                         "livenessProbe": {
-                            "timeoutSeconds": {{ glusterfs_daemonset.liveness_probe.timeout_seconds }},
-                            "initialDelaySeconds": {{ glusterfs_daemonset.liveness_probe.initial_delay_seconds }},
+                            "timeoutSeconds": 3,
+                            "initialDelaySeconds": 10,
                             "exec": {
                                 "command": [
                                     "/bin/bash",

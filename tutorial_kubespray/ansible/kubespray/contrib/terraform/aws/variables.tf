@@ -20,38 +20,20 @@ variable "aws_cluster_name" {
   description = "Name of AWS Cluster"
 }
 
-variable "ami_name_pattern" {
-  description = "The name pattern to use for AMI lookup"
-  type        = string
-  default     = "debian-10-amd64-*"
-}
-
-variable "ami_virtualization_type" {
-  description = "The virtualization type to use for AMI lookup"
-  type        = string
-  default     = "hvm"
-}
-
-variable "ami_owners" {
-  description = "The owners to use for AMI lookup"
-  type        = list(string)
-  default     = ["136693071363"]
-}
-
 data "aws_ami" "distro" {
   most_recent = true
 
   filter {
     name   = "name"
-    values = [var.ami_name_pattern]
+    values = ["debian-10-amd64-*"]
   }
 
   filter {
     name   = "virtualization-type"
-    values = [var.ami_virtualization_type]
+    values = ["hvm"]
   }
 
-  owners = var.ami_owners
+  owners = ["136693071363"] # Debian-10
 }
 
 //AWS VPC Variables
@@ -122,11 +104,11 @@ variable "aws_kube_worker_size" {
 }
 
 /*
-* AWS NLB Settings
+* AWS ELB Settings
 *
 */
-variable "aws_nlb_api_port" {
-  description = "Port for AWS NLB"
+variable "aws_elb_api_port" {
+  description = "Port for AWS ELB"
 }
 
 variable "k8s_secure_api_port" {

@@ -1,5 +1,4 @@
 ---
-- name: Disable firewalld/ufw
-  hosts: all
+- hosts: all
   roles:
     - { role: prepare }

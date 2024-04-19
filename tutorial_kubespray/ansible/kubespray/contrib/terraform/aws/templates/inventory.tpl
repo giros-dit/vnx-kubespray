@@ -24,4 +24,4 @@ kube_control_plane
 calico_rr
 
 [k8s_cluster:vars]
-${nlb_api_fqdn}
+${elb_api_fqdn}
