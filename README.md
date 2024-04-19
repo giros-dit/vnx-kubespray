@@ -30,7 +30,7 @@ vnx_download_rootfs -r vnx_rootfs_kvm_ubuntu64-20.04-v025.qcow2 -y -l
 vnx_download_rootfs -r vnx_rootfs_lxc_ubuntu64-22.04-v025 -y -l
 cd -
 ```
-**IMPORTANT NOTE:** This VNX scenario **cannot be deployed on a VirtualBox VM** since the virtualized nodes in the scenario are KVM-based virtual machines.
+**IMPORTANT NOTE:** This VNX scenario cannot be deployed on virtual machines on older VirtualBox/VMware virtualization environments that do not support nested virtualization as the virtualized nodes in the scenario are KVM-based virtual machines. Despite this, the latest versions of VirtualBox/VMware support nested virtualization.
 
 ## Setup
 
@@ -40,7 +40,6 @@ Install [Ansible](https://www.ansible.com/) among other utilities needed by kube
 cd tutorial_kubespray/ansible/kubespray
 sudo pip3 install -r requirements.txt
 ```
-
 
 ## Getting Started
 
@@ -83,6 +82,8 @@ ssh h1
 
 This is how Ansible would access the nodes in the scenario.
 
+**NOTE:** If you get a `WARNING: UNPROTECTED PRIVATE KEY FILE!` error, make sure you only giveread and write permissions for your user to for the files in [`./tutorial_kubespray/conf/ssh/`](./tutorial_kubespray/conf/ssh/) folder.
+
 ## Checking cluster operation
 - Cluster node availability:
 ```bash
@@ -120,8 +121,9 @@ registry-proxy-tbvzz                 1/1     Running   0          2m31s
 weave-net-clw5m                      2/2     Running   0          3m12s
 weave-net-k7swf                      2/2     Running   0          3m12s
 weave-net-vv2c9                      2/2     Running   1          3m12s
+```
 
-> *Note*: The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
+> **NOTE:** : The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
   
 ### Kubectl usage
 
