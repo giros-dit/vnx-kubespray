@@ -97,30 +97,33 @@ k8s-worker2   Ready    <none>                 2m1s    v1.21.5
 ```bash
 root@k8s-master:~# kubectl get pods -n kube-system
 NAME                                       READY   STATUS    RESTARTS   AGE
-calico-kube-controllers-8575b76f66-j8hbl   1/1     Running   0          107s
-calico-node-dqsd5                          1/1     Running   0          119s
-calico-node-rq7n9                          1/1     Running   0          119s
-calico-node-wtv8m                          1/1     Running   0          119s
-coredns-8474476ff8-hd88j                   1/1     Running   0          90s
-coredns-8474476ff8-n9v98                   1/1     Running   0          85s
-dns-autoscaler-7df78bfcfb-r7r4z            1/1     Running   0          87s
-kube-apiserver-k8s-master                  1/1     Running   0          2m57s
-kube-controller-manager-k8s-master         1/1     Running   0          2m57s
-kube-proxy-89vv4                           1/1     Running   0          2m10s
-kube-proxy-bl95v                           1/1     Running   0          2m10s
-kube-proxy-p6ws4                           1/1     Running   0          2m10s
-kube-scheduler-k8s-master                  1/1     Running   0          2m57s
-nginx-proxy-k8s-worker1                    1/1     Running   0          2m11s
-nginx-proxy-k8s-worker2                    1/1     Running   0          2m11s
-nodelocaldns-5zqdt                         1/1     Running   0          87s
-nodelocaldns-6dhzx                         1/1     Running   0          87s
-nodelocaldns-7f5gn                         1/1     Running   0          87s
-registry-pnpsb                             1/1     Running   0          77s
-registry-proxy-zkbgx                       1/1     Running   0          76s
-registry-proxy-zrdqq                       1/1     Running   0          76s
+calico-kube-controllers-8575b76f66-pfzpt   1/1     Running   0          21m
+calico-node-gg2ft                          1/1     Running   0          22m
+calico-node-rcvf6                          1/1     Running   0          22m
+calico-node-v6fxx                          1/1     Running   0          22m
+coredns-8474476ff8-bn7pv                   1/1     Running   0          21m
+coredns-8474476ff8-jxc2d                   1/1     Running   0          21m
+dns-autoscaler-7df78bfcfb-2kh7j            1/1     Running   0          21m
+kube-apiserver-k8s-master                  1/1     Running   0          22m
+kube-controller-manager-k8s-master         1/1     Running   0          22m
+kube-multus-ds-amd64-6r2w6                 1/1     Running   0          21m
+kube-multus-ds-amd64-hrn9r                 1/1     Running   0          21m
+kube-multus-ds-amd64-mc6vz                 1/1     Running   0          21m
+kube-proxy-6kjhl                           1/1     Running   0          22m
+kube-proxy-6ng9n                           1/1     Running   0          22m
+kube-proxy-bb9tp                           1/1     Running   0          22m
+kube-scheduler-k8s-master                  1/1     Running   0          22m
+nginx-proxy-k8s-worker1                    1/1     Running   0          22m
+nginx-proxy-k8s-worker2                    1/1     Running   0          22m
+nodelocaldns-bhflb                         1/1     Running   0          21m
+nodelocaldns-t7wxh                         1/1     Running   0          21m
+nodelocaldns-thh5j                         1/1     Running   0          21m
+registry-2ks5f                             1/1     Running   0          21m
+registry-proxy-4p6c5                       1/1     Running   0          21m
+registry-proxy-cnqjb                       1/1     Running   0          21m
 ```
 
-> **NOTE:**: The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
+> **NOTE:** The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
   
 ### Kubectl usage
 
