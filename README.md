@@ -87,6 +87,7 @@ This is how Ansible would access the nodes in the scenario.
 ## Checking cluster operation
 - Cluster node availability:
 ```bash
+root@k8s-master:~# kubectl get nodes
 NAME          STATUS   ROLES                  AGE     VERSION
 k8s-master    Ready    control-plane,master   2m56s   v1.21.5
 k8s-worker1   Ready    <none>                 2m1s    v1.21.5
