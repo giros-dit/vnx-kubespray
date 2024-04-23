@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vma4
+  annotations:
+    k8s.v1.cni.cncf.io/networks: vlan1000
+spec:
+  containers:
+  - name: vma4
+    image: alpine
+    command: ["/bin/ash", "-c", "trap : TERM INT; sleep infinity & wait"]
