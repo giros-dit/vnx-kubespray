@@ -125,7 +125,55 @@ registry-proxy-cnqjb                       1/1     Running   0          21m
 ```
 
 > **NOTE:** The installation also include the [Multus](https://github.com/k8snetworkplumbingwg/multus-cni) networking plugin to allow adding additional interfaces to deployed pods.
-  
+
+For the interconnection between Kubernetes pods and external systems (i.e., external virtual machines or containers outside Kubernetes cluster), we can define VLANs with `Multus`. Follow the steps below:
+
+1. Create `eth2` subinterfaces in `k8s-worker1` and `k8s-worker2` Kubernetes cluster nodes (the `eth2` interfaces within Kubernetes nodes defined in the [tutorial_kubespray.xml](./tutorial_kubespray/vnx/tutorial_kubespray.xml) VNX scenario are connected to a dedicated network for VLANs):
+```bash
+ssh k8s-worker1 ip link add link eth2 name eth2.1000 type vlan id 1000
+ssh k8s-worker1 ip link add link eth2 name eth2.1001 type vlan id 1001
+ssh k8s-worker2 ip link add link eth2 name eth2.1000 type vlan id 1000
+ssh k8s-worker2 ip link add link eth2 name eth2.1001 type vlan id 1001
+ssh k8s-worker1 ip link set eth2.1000 up
+ssh k8s-worker1 ip link set eth2.1001 up
+ssh k8s-worker2 ip link set eth2.1000 up
+ssh k8s-worker2 ip link set eth2.1001 up
+```
+2. Start example pods in VLANs 1000 and 10001:
+```bash
+cd tutorial_kubespray/examples/multus
+kubectl create -f vlan1000-dhcp.yml
+kubectl create -f vma3-dhcp.yml
+kubectl create -f vma4-dhcp.yml
+kubectl create -f vlan1001-dhcp.yml
+kubectl create -f vmb3-dhcp.yml
+kubectl create -f vmb4-dhcp.yml
+```
+3. For the Multus configuration, we create Kubernetes objects of type `NetworkAttachmentDefinition` to assign new interfaces to the pods that belong to VLANs 1000 and 1001. We create an object of type `NetworkAttachmentDefinition` for each VLAN. To check the creation of resources of type `NetworkAttachmentDefinition` for VLANs 1000 and 1001 we can execute the following commands:
+```bash
+kubectl describe net-attach-def vlan1000
+kubectl describe net-attach-def vlan1001
+```   
+4. Deploy an additional VNX demo scenario with LXC containers (i.e., `vmA2` and `vmB2`) deployed in VLANs 1000 and 1001, and a router container (i.e., `vlan-router`) for performing Inter-VLAN routing:
+```bash
+cd tutorial_kubespray/vnx
+sudo vnx -f openstack_lab-vms-vlan --create
+```
+5. Check connectivity from Kubernetes pods to VNX LXC containers. For example:
+```bash
+kubectl exec -it vma3 -- ping 10.1.3.100
+kubectl exec -ti vmb3 -- ping 10.1.2.100
+```
+6. Destroy Kubernetes pods and VLAN networks with:
+```bash
+kubectl delete net-attach-def vlan1000
+kubectl delete pod --grace-period=0 --force vma3
+kubectl delete pod --grace-period=0 --force vma4
+kubectl delete net-attach-def vlan1001
+kubectl delete pod --grace-period=0 --force vmb3
+kubectl delete pod --grace-period=0 --force vmb4
+```
+
 ### Kubectl usage
 
 Kubespray installs `kubectl` client for us in the `k8s-master` node. Kube config file used by the client is stored in `/root/.kube/config`. This is a copy of `/etc/kubernetes/admin.conf` file.
