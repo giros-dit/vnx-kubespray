@@ -1,19 +1,48 @@
 ---
 - hosts: kube_control_plane[0]
   vars:
-    test_image_repo: k8s.gcr.io/busybox
-    test_image_tag: latest
+    test_image_repo: registry.k8s.io/e2e-test-images/agnhost
+    test_image_tag: "2.40"
 
   tasks:
   - name: Force binaries directory for Flatcar Container Linux by Kinvolk
     set_fact:
       bin_dir: "/opt/bin"
-    when: ansible_os_family in ["Flatcar Container Linux by Kinvolk"]
+    when: ansible_os_family in ["Flatcar", "Flatcar Container Linux by Kinvolk"]
 
   - name: Force binaries directory for other hosts
     set_fact:
       bin_dir: "/usr/local/bin"
-    when: not ansible_os_family in ["Flatcar Container Linux by Kinvolk"]
+    when: not ansible_os_family in ["Flatcar", "Flatcar Container Linux by Kinvolk"]
+
+  - name: Check kubelet serving certificates approved with kubelet_csr_approver
+    block:
+
+    - name: Get certificate signing requests
+      command: "{{ bin_dir }}/kubectl get csr"
+      register: get_csr
+      changed_when: false
+
+    - debug:  # noqa unnamed-task
+        msg: "{{ get_csr.stdout.split('\n') }}"
+
+    - name: Check there are csrs
+      assert:
+        that: get_csr.stdout_lines | length > 0
+        fail_msg: kubelet_rotate_server_certificates is {{ kubelet_rotate_server_certificates }} but no csr's found
+
+    - name: Get Denied/Pending certificate signing requests
+      shell: "{{ bin_dir }}/kubectl get csr | grep -e Denied -e Pending || true"
+      register: get_csr_denied_pending
+      changed_when: false
+
+    - name: Check there are Denied/Pending csrs
+      assert:
+        that: get_csr_denied_pending.stdout_lines | length == 0
+        fail_msg: kubelet_csr_approver is enabled but CSRs are not approved
+    when:
+    - kubelet_rotate_server_certificates | default(false)
+    - kubelet_csr_approver_enabled | default(kubelet_rotate_server_certificates | default(false))
 
   - name: Approve kubelet serving certificates
     block:
@@ -37,7 +66,9 @@
     - debug:  # noqa unnamed-task
         msg: "{{ certificate_approve.stdout.split('\n') }}"
 
-    when: kubelet_rotate_server_certificates | default(false)
+    when:
+    - kubelet_rotate_server_certificates | default(false)
+    - not (kubelet_csr_approver_enabled | default(kubelet_rotate_server_certificates | default(false)))
 
   - name: Create test namespace
     command: "{{ bin_dir }}/kubectl create namespace test"
@@ -53,12 +84,33 @@
     retries: 5
     delay: 5
 
-  - name: Run 2 busybox pods in test ns
-    command: "{{ bin_dir }}/kubectl run {{ item }} --image={{ test_image_repo }}:{{ test_image_tag }} --namespace test --command -- tail -f /dev/null"
+  - name: Run 2 agnhost pods in test ns
+    shell:
+      cmd: |
+        cat <<EOF | {{ bin_dir }}/kubectl apply -f -
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: {{ item }}
+          namespace: test
+        spec:
+          containers:
+          - name: agnhost
+            image: {{ test_image_repo }}:{{ test_image_tag }}
+            command: ['/agnhost', 'netexec', '--http-port=8080']
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ['ALL']
+              runAsUser: 1000
+              runAsNonRoot: true
+              seccompProfile:
+                type: RuntimeDefault
+        EOF
     changed_when: false
     loop:
-    - busybox1
-    - busybox2
+    - agnhost1
+    - agnhost2
 
   - import_role:  # noqa unnamed-task
       name: cluster-dump
@@ -131,8 +183,8 @@
     - item in pods_running
     with_items: "{{ pod_ips }}"
 
-  - name: Ping between pods is working
-    command: "{{ bin_dir }}/kubectl -n test exec {{ item[0] }} -- ping -c 4 {{ item[1] }}"
+  - name: Curl between pods is working
+    command: "{{ bin_dir }}/kubectl -n test exec {{ item[0] }} -- curl {{ item[1] }}:8080"
     when:
     - not item[0] in pods_hostnet
     - not item[1] in pods_hostnet
@@ -140,8 +192,8 @@
     - "{{ pod_names }}"
     - "{{ pod_ips }}"
 
-  - name: Ping between hostnet pods is working
-    command: "{{ bin_dir }}/kubectl -n test exec {{ item[0] }} -- ping -c 4 {{ item[1] }}"
+  - name: Curl between hostnet pods is working
+    command: "{{ bin_dir }}/kubectl -n test exec {{ item[0] }} -- curl {{ item[1] }}:8080"
     when:
     - item[0] in pods_hostnet
     - item[1] in pods_hostnet

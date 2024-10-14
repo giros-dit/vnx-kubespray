@@ -18,13 +18,14 @@
     --config={{ kube_config_dir }}/kubeadm-config.yaml
     --ignore-preflight-errors=all
     --allow-experimental-upgrades
-    --etcd-upgrade={{ etcd_kubeadm_enabled | bool | lower }}
+    --etcd-upgrade={{ (etcd_deployment_type == "kubeadm") | bool | lower }}
+    {% if kubeadm_patches is defined and kubeadm_patches.enabled %}--patches={{ kubeadm_patches.dest_dir }}{% endif %}
     --force
   register: kubeadm_upgrade
   # Retry is because upload config sometimes fails
   retries: 3
   until: kubeadm_upgrade.rc == 0
-  when: inventory_hostname == groups['kube_control_plane']|first
+  when: inventory_hostname == first_kube_control_plane
   failed_when: kubeadm_upgrade.rc != 0 and "field is immutable" not in kubeadm_upgrade.stderr
   environment:
     PATH: "{{ bin_dir }}:{{ ansible_env.PATH }}"
@@ -39,13 +40,15 @@
     --config={{ kube_config_dir }}/kubeadm-config.yaml
     --ignore-preflight-errors=all
     --allow-experimental-upgrades
-    --etcd-upgrade={{ etcd_kubeadm_enabled | bool | lower }}
+    --etcd-upgrade={{ (etcd_deployment_type == "kubeadm") | bool | lower }}
+    {% if kubeadm_patches is defined and kubeadm_patches.enabled %}--patches={{ kubeadm_patches.dest_dir }}{% endif %}
     --force
   register: kubeadm_upgrade
-  when: inventory_hostname != groups['kube_control_plane']|first
-  failed_when:
-    - kubeadm_upgrade.rc != 0
-    - '"field is immutable" not in kubeadm_upgrade.stderr'
+  # Retry is because upload config sometimes fails
+  retries: 3
+  until: kubeadm_upgrade.rc == 0
+  when: inventory_hostname != first_kube_control_plane
+  failed_when: kubeadm_upgrade.rc != 0 and "field is immutable" not in kubeadm_upgrade.stderr
   environment:
     PATH: "{{ bin_dir }}:{{ ansible_env.PATH }}"
   notify: Master | restart kubelet
@@ -61,15 +64,14 @@
 # FIXME: https://github.com/kubernetes/kubeadm/issues/1318
 - name: kubeadm | scale down coredns replicas to 0 if not using coredns dns_mode
   command: >-
-    {{ bin_dir }}/kubectl
-    --kubeconfig {{ kube_config_dir }}/admin.conf
+    {{ kubectl }}
     -n kube-system
     scale deployment/coredns --replicas 0
   register: scale_down_coredns
   retries: 6
   delay: 5
   until: scale_down_coredns is succeeded
-  run_once: yes
+  run_once: true
   when:
     - kubeadm_scale_down_coredns_enabled
     - dns_mode not in ['coredns', 'coredns_dual']

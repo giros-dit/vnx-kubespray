@@ -10,7 +10,4 @@
       src: bird.conf.j2
       dest: /etc/bird/bird.conf
 
-  - name: Restart BIRD daemon to apply configuration
-    service:
-      name: bird
-      state: restarted
+

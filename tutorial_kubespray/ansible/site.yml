@@ -1,22 +1,22 @@
 ---
-  - hosts: r1
-    pre_tasks:
-      - name: Make sure eth9 gets IP
-        shell: dhclient eth9
-    roles: 
-      - bird
-    tags: bird
+- hosts: r1
+  pre_tasks:
+    - name: Make sure eth9 gets IP
+      shell: dhclient eth9
+#  roles: 
+#    - bird
+#  tags: bird
 
-  - name: Include kubespray tasks
-    include: kubespray/cluster.yml
-    tags: kubespray
+- import_playbook: kubespray/cluster.yml
+  tags: kubespray
 
-  - hosts: kube-master[0]
-    roles:
-      - metallb
-    tags: metallb
+#- hosts: kube-master[0]
+#  roles:
+#    - metallb
+#  tags: metallb
 
-  - hosts: kube-master[0]
-    roles:
-      - nginx-ingress
-    tags: nginx-ingress
+- hosts: kube-master[0]
+  roles:
+    - nginx-ingress
+  tags: nginx-ingress
+

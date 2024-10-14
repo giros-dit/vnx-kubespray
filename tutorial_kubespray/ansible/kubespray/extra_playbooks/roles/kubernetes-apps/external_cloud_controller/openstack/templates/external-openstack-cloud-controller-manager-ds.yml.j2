@@ -24,11 +24,7 @@ spec:
         k8s-app: openstack-cloud-controller-manager
     spec:
       nodeSelector:
-{% if kube_version is version('v1.20.0', '<') %}
-        node-role.kubernetes.io/master: ""
-{% else %}
         node-role.kubernetes.io/control-plane: ""
-{% endif %}
       securityContext:
         runAsUser: 999
       tolerations:
@@ -50,7 +46,7 @@ spec:
             - --cloud-provider=openstack
             - --cluster-name={{ cluster_name }}
             - --use-service-account-credentials=true
-            - --address=127.0.0.1
+            - --bind-address={{ external_openstack_cloud_controller_bind_address }}
 {% for key, value in external_openstack_cloud_controller_extra_args.items() %}
             - "{{ '--' + key + '=' + value }}"
 {% endfor %}

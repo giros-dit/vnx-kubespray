@@ -14,8 +14,8 @@ hands-on guide to get started with Kubespray.
 
 ## Cluster Details
 
-* [kubespray](https://github.com/kubernetes-sigs/kubespray) v2.13.x
-* [kubernetes](https://github.com/kubernetes/kubernetes) v1.17.9
+* [kubespray](https://github.com/kubernetes-sigs/kubespray)
+* [kubernetes](https://github.com/kubernetes/kubernetes)
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ gcloud compute networks create kubernetes-the-kubespray-way --subnet-mode custom
 
 A [subnet](https://cloud.google.com/compute/docs/vpc/#vpc_networks_and_subnets) must be provisioned with an IP address range large enough to assign a private IP address to each node in the Kubernetes cluster.
 
-Create the `kubernetes` subnet in the `kubernetes-the-hard-way` VPC network:
+Create the `kubernetes` subnet in the `kubernetes-the-kubespray-way` VPC network:
 
 ```ShellSession
 gcloud compute networks subnets create kubernetes \
@@ -61,12 +61,12 @@ gcloud compute networks subnets create kubernetes \
 #### Firewall Rules
 
 Create a firewall rule that allows internal communication across all protocols.
-It is important to note that the ipip protocol has to be allowed in order for
+It is important to note that the vxlan protocol has to be allowed in order for
 the calico (see later) networking plugin to work.
 
 ```ShellSession
 gcloud compute firewall-rules create kubernetes-the-kubespray-way-allow-internal \
-  --allow tcp,udp,icmp,ipip \
+  --allow tcp,udp,icmp,vxlan \
   --network kubernetes-the-kubespray-way \
   --source-ranges 10.240.0.0/24
 ```
@@ -196,7 +196,7 @@ Next, we will git clone the Kubespray code into our working directory:
 ```ShellSession
 git clone https://github.com/kubernetes-sigs/kubespray.git
 cd kubespray
-git checkout release-2.13
+git checkout release-2.17
 ```
 
 Now we need to install the dependencies for Ansible to run the Kubespray
@@ -252,11 +252,7 @@ Ansible will now execute the playbook, this can take up to 20 minutes.
 We will leverage a kubeconfig file from one of the controller nodes to access
  the cluster as administrator from our local workstation.
 
-> In this simplified set-up, we did not include a load balancer that usually
- sits on top of the
-three controller nodes for a high available API server endpoint. In this
- simplified tutorial we connect directly to one of the three
- controllers.
+> In this simplified set-up, we did not include a load balancer that usually sits on top of the three controller nodes for a high available API server endpoint. In this simplified tutorial we connect directly to one of the three controllers.
 
 First, we need to edit the permission of the kubeconfig file on one of the
 controller nodes:
@@ -276,7 +272,7 @@ scp $USERNAME@$IP_CONTROLLER_0:/etc/kubernetes/admin.conf kubespray-do.conf
 
 This kubeconfig file uses the internal IP address of the controller node to
 access the API server. This kubeconfig file will thus not work of from
-outside of the VPC network. We will need to change the API server IP address
+outside the VPC network. We will need to change the API server IP address
 to the controller node his external IP address. The external IP address will be
 accepted in the
 TLS negotiation as we added the controllers external IP addresses in the SSL
@@ -470,7 +466,7 @@ kubectl logs $POD_NAME
 
 #### Exec
 
-In this section you will verify the ability to [execute commands in a container](https://kubernetes.io/docs/tasks/debug-application-cluster/get-shell-running-container/#running-individual-commands-in-a-container).
+In this section you will verify the ability to [execute commands in a container](https://kubernetes.io/docs/tasks/debug/debug-application/get-shell-running-container/#running-individual-commands-in-a-container).
 
 Print the nginx version by executing the `nginx -v` command in the `nginx` container:
 
@@ -486,7 +482,7 @@ nginx version: nginx/1.19.1
 
 ### Kubernetes services
 
-#### Expose outside of the cluster
+#### Expose outside the cluster
 
 In this section you will verify the ability to expose applications using a [Service](https://kubernetes.io/docs/concepts/services-networking/service/).
 

@@ -3,18 +3,18 @@
 - import_tasks: 0010-swapoff.yml
   when:
     - not dns_late
-    - disable_swap
+    - kubelet_fail_swap_on
 
-- import_tasks: 0020-verify-settings.yml
+- import_tasks: 0020-set_facts.yml
+  tags:
+    - resolvconf
+    - facts
+
+- import_tasks: 0040-verify-settings.yml
   when:
     - not dns_late
   tags:
     - asserts
-
-- import_tasks: 0040-set_facts.yml
-  tags:
-    - resolvconf
-    - facts
 
 - import_tasks: 0050-create_directories.yml
   when:
@@ -25,7 +25,7 @@
     - dns_mode != 'none'
     - resolvconf_mode == 'host_resolvconf'
     - systemd_resolved_enabled.rc != 0
-    - not is_fedora_coreos
+    - networkmanager_enabled.rc != 0
   tags:
     - bootstrap-os
     - resolvconf
@@ -40,6 +40,8 @@
     - resolvconf
 
 - import_tasks: 0062-networkmanager-unmanaged-devices.yml
+  when:
+    - networkmanager_enabled.rc == 0
   tags:
     - bootstrap-os
 
@@ -47,7 +49,7 @@
   when:
     - dns_mode != 'none'
     - resolvconf_mode == 'host_resolvconf'
-    - is_fedora_coreos
+    - networkmanager_enabled.rc == 0
   tags:
     - bootstrap-os
     - resolvconf
@@ -64,9 +66,14 @@
   tags:
     - bootstrap-os
 
-- import_tasks: 0090-etchosts.yml
+- import_tasks: 0081-ntp-configurations.yml
   when:
     - not dns_late
+    - ntp_enabled
+  tags:
+    - bootstrap-os
+
+- import_tasks: 0090-etchosts.yml
   tags:
     - bootstrap-os
     - etchosts
@@ -75,7 +82,8 @@
   when:
     - dns_mode != 'none'
     - resolvconf_mode == 'host_resolvconf'
-    - not ansible_os_family in ["Flatcar Container Linux by Kinvolk"]
+    - dhclientconffile is defined
+    - not ansible_os_family in ["Flatcar", "Flatcar Container Linux by Kinvolk"]
   tags:
     - bootstrap-os
     - resolvconf
@@ -84,7 +92,8 @@
   when:
     - dns_mode != 'none'
     - resolvconf_mode != 'host_resolvconf'
-    - not ansible_os_family in ["Flatcar Container Linux by Kinvolk"]
+    - dhclientconffile is defined
+    - not ansible_os_family in ["Flatcar", "Flatcar Container Linux by Kinvolk"]
   tags:
     - bootstrap-os
     - resolvconf
@@ -113,3 +122,11 @@
     - ansible_os_family == "RedHat"
   tags:
     - bootstrap-os
+
+- name: Run calico checks
+  include_role:
+    name: network_plugin/calico
+    tasks_from: check
+  when:
+    - kube_network_plugin == 'calico'
+    - not ignore_assert_errors
