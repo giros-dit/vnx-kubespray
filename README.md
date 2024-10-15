@@ -89,9 +89,9 @@ This is how Ansible would access the nodes in the scenario.
 ```bash
 root@k8s-master:~# kubectl get nodes
 NAME          STATUS   ROLES                  AGE    VERSION
-k8s-master    Ready    control-plane,master   5m1s   v1.21.5
-k8s-worker1   Ready    <none>                 4m     v1.21.5
-k8s-worker2   Ready    <none>                 4m     v1.21.5
+k8s-master    Ready    control-plane          5m1s   v1.26.11
+k8s-worker1   Ready    <none>                 4m     v1.26.11
+k8s-worker2   Ready    <none>                 4m     v1.26.11
 ```
 
 - Kubernetes system pods status:
